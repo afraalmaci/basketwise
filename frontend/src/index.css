@@ -1,0 +1,126 @@
+:root {
+  --bg: #f6f7f4;
+  --surface: #ffffff;
+  --text: #1d2420;
+  --muted: #5f6b64;
+  --border: #dde2dc;
+  --accent: #2f7d4f;
+  --ok-bg: #e3f2e8;
+  --ok-text: #1f5c38;
+  --error-bg: #fbe6e4;
+  --error-text: #9b2c22;
+  --muted-bg: #eceee9;
+
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #141816;
+    --surface: #1c211e;
+    --text: #e6ebe7;
+    --muted: #9aa69f;
+    --border: #2c332f;
+    --accent: #5cc184;
+    --ok-bg: #1f3a29;
+    --ok-text: #9fe0b8;
+    --error-bg: #3f1f1c;
+    --error-text: #f2a79f;
+    --muted-bg: #252b27;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+.layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.logo {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--accent);
+  letter-spacing: -0.01em;
+}
+
+.badge {
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+.badge--ok {
+  background: var(--ok-bg);
+  color: var(--ok-text);
+}
+.badge--error {
+  background: var(--error-bg);
+  color: var(--error-text);
+}
+.badge--muted {
+  background: var(--muted-bg);
+  color: var(--muted);
+}
+
+.content {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  min-height: 0;
+}
+
+.panel {
+  padding: 20px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+}
+.panel h2 {
+  margin-top: 0;
+  font-size: 1rem;
+}
+
+.muted {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.map-wrapper,
+.map {
+  height: 100%;
+  width: 100%;
+}
+
+@media (max-width: 720px) {
+  .content {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+  .panel {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .map-wrapper {
+    min-height: 60vh;
+  }
+}

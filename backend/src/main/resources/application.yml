@@ -1,0 +1,28 @@
+spring:
+  application:
+    name: basketwise
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/basketwise}
+    username: ${DB_USER:basketwise}
+    password: ${DB_PASSWORD:basketwise}
+  flyway:
+    locations: classpath:db/migration
+
+server:
+  port: ${PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+basketwise:
+  # Only "demo" exists for now: synthetic stores and prices, safe to deploy publicly.
+  data-mode: ${DATA_MODE:demo}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}

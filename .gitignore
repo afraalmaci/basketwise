@@ -1,0 +1,20 @@
+# Environment
+.env
+
+# Java / Maven
+backend/target/
+*.class
+
+# Node
+node_modules/
+frontend/dist/
+*.tsbuildinfo
+
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+
+# Logs
+*.log
