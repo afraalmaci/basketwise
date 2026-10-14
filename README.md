@@ -56,6 +56,30 @@ cd backend && mvn verify   # needs PostgreSQL running (docker compose up db)
 cd frontend && npm test
 ```
 
+## API
+
+| Endpoint | Description |
+|---|---|
+| `GET /api/chains` | Supermarket chains with color and store count |
+| `GET /api/stores` | All stores with coordinates |
+| `GET /api/products/search?q=melk` | Fuzzy product search; every hit includes each chain's offers with normalized unit prices |
+| `GET /api/system/info` | Data mode and database status |
+
+## Demo data
+
+On first start the backend generates a deterministic dataset (fixed seed): 4 fictional
+chains, 20 stores across Den Haag, ~165 products and ~750 offers. Each chain writes names
+and pack sizes in its own style (`1,5 L`, `1500 ml`, `1,5l`, `1,5 liter`), and every label
+is run through the quantity parser and checked against the generator's ground truth
+before it is stored.
+
+| Chain | Price level | Assortment | Stores |
+|---|---|---|---|
+| Budgetbaas | cheapest | ~70% | 3, on the outskirts |
+| Hoekwinkel | most expensive | everything | 8, everywhere |
+| Versplein | average, cheap produce | ~85% | 5 |
+| Marktwijs | slightly below average, cheap drinks | ~90% | 4 |
+
 ## Project structure
 
 ```

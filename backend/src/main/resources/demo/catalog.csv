@@ -1,0 +1,171 @@
+# key;name;category;unit;sizes;reference_cents
+# unit: ml | g | pc
+# sizes: pipe-separated pack sizes in base units; NxM means a multipack of N packs of M
+# reference_cents: typical price per liter / kilogram (ml, g) or per piece (pc)
+halfvolle-melk;Halfvolle melk;dairy;ml;1000|1500;115
+volle-melk;Volle melk;dairy;ml;1000|1500;125
+magere-melk;Magere melk;dairy;ml;1000;110
+karnemelk;Karnemelk;dairy;ml;1000;105
+yoghurt-naturel;Yoghurt naturel;dairy;ml;500|1000;150
+griekse-yoghurt;Griekse yoghurt;dairy;g;500|1000;420
+magere-kwark;Magere kwark;dairy;g;500|1000;310
+vanillevla;Vanillevla;dairy;ml;1000;185
+slagroom;Slagroom;dairy;ml;250|500;640
+roomboter;Roomboter;dairy;g;250;1150
+halvarine;Halvarine;dairy;g;500;390
+kaas-jong-belegen;Jong belegen kaas;dairy;g;400|800;1290
+kaas-oud;Oude kaas;dairy;g;400;1690
+geraspte-kaas;Geraspte kaas;dairy;g;150|300;1490
+mozzarella;Mozzarella;dairy;g;125|250;1040
+feta;Feta;dairy;g;200;1290
+roomkaas;Roomkaas naturel;dairy;g;150|300;1350
+scharreleieren;Scharreleieren;dairy;pc;6|10|12;32
+haverdrink;Haverdrink;dairy;ml;1000;199
+sojadrink;Sojadrink;dairy;ml;1000;179
+volkorenbrood;Volkorenbrood;bakery;g;800;310
+witbrood;Witbrood;bakery;g;800;250
+meergranenbrood;Meergranenbrood;bakery;g;800;340
+krentenbollen;Krentenbollen;bakery;pc;6|8;38
+croissants;Croissants;bakery;pc;4|6;55
+beschuit;Beschuit;bakery;pc;13|26;9
+volkoren-crackers;Volkoren crackers;bakery;g;250;640
+tortilla-wraps;Tortilla wraps;bakery;pc;6|8;28
+pitabroodjes;Pitabroodjes;bakery;pc;6;27
+ontbijtkoek;Ontbijtkoek;bakery;g;500;380
+tomaten;Tomaten;vegetables;g;500|1000;390
+komkommer;Komkommer;vegetables;pc;1;89
+rode-paprika;Rode paprika;vegetables;pc;1|3;79
+uien;Uien;vegetables;g;1000|2000;149
+knoflook;Knoflook;vegetables;pc;3|5;33
+kruimige-aardappelen;Kruimige aardappelen;vegetables;g;1500|2500;139
+zoete-aardappel;Zoete aardappel;vegetables;g;500|1000;398
+winterpeen;Winterpeen;vegetables;g;1000;129
+broccoli;Broccoli;vegetables;g;500;398
+bloemkool;Bloemkool;vegetables;pc;1;199
+spinazie;Spinazie;vegetables;g;300|600;690
+ijsbergsla;IJsbergsla;vegetables;pc;1;109
+champignons;Champignons;vegetables;g;250|400;640
+courgette;Courgette;vegetables;pc;1;99
+prei;Prei;vegetables;g;500;298
+avocado;Avocado;vegetables;pc;1|2;119
+cherrytomaatjes;Cherrytomaatjes;vegetables;g;250|500;798
+sperziebonen;Sperziebonen;vegetables;g;400;548
+bananen;Bananen;fruit;g;1000;199
+elstar-appels;Elstar appels;fruit;g;1000|1500;249
+conference-peren;Conference peren;fruit;g;1000;269
+handsinaasappels;Handsinaasappels;fruit;g;1500|2000;199
+mandarijnen;Mandarijnen;fruit;g;1000;299
+witte-druiven;Witte druiven;fruit;g;500;598
+aardbeien;Aardbeien;fruit;g;400;698
+blauwe-bessen;Blauwe bessen;fruit;g;125|250;1590
+citroenen;Citroenen;fruit;pc;3|5;39
+kiwi;Kiwi;fruit;pc;4|6;35
+mango;Mango;fruit;pc;1;169
+ananas;Ananas;fruit;pc;1;249
+kipfilet;Kipfilet;meat;g;300|600|1000;1290
+kippendijfilet;Kippendijfilet;meat;g;400;1240
+rundergehakt;Rundergehakt;meat;g;300|500|1000;1180
+half-om-half-gehakt;Half-om-half gehakt;meat;g;500;990
+varkenshaas;Varkenshaas;meat;g;400;1490
+speklappen;Speklappen;meat;g;400;990
+rookworst;Rookworst;meat;g;275;890
+spekblokjes;Spekblokjes;meat;g;150|250;1290
+kipdrumsticks;Kipdrumsticks;meat;g;600|1000;649
+biefstuk;Biefstuk;meat;g;200|400;2490
+gekookte-ham;Gekookte ham;meat;g;150;1590
+kipfilet-beleg;Kipfilet beleg;meat;g;150;1790
+salami;Salami;meat;g;80|150;1890
+vegetarische-burgers;Vegetarische burgers;meat;pc;2|4;120
+zalmfilet;Zalmfilet;fish;g;250|500;2390
+kabeljauwfilet;Kabeljauwfilet;fish;g;300;2190
+garnalen;Garnalen;fish;g;200;2290
+tonijn-in-water;Tonijn in water;fish;g;145|3x145;1290
+haring;Hollandse haring;fish;pc;2|4;150
+vissticks;Vissticks;fish;pc;10|20;25
+spaghetti;Spaghetti;pasta_rice;g;500|1000;198
+penne;Penne;pasta_rice;g;500;198
+macaroni;Macaroni;pasta_rice;g;500;188
+volkoren-penne;Volkoren penne;pasta_rice;g;500;258
+basmatirijst;Basmatirijst;pasta_rice;g;400|1000;398
+zilvervliesrijst;Zilvervliesrijst;pasta_rice;g;400|1000;368
+couscous;Couscous;pasta_rice;g;500;358
+mie;Mie nestjes;pasta_rice;g;250;598
+lasagnebladen;Lasagnebladen;pasta_rice;g;250|500;478
+bulgur;Bulgur;pasta_rice;g;500;378
+havermout;Havermout;breakfast;g;500|1000;278
+cornflakes;Cornflakes;breakfast;g;375|500;548
+krokante-muesli;Krokante muesli;breakfast;g;375|750;698
+pindakaas;Pindakaas;breakfast;g;350|600;598
+hagelslag;Chocoladehagelslag;breakfast;g;400|600;648
+aardbeienjam;Aardbeienjam;breakfast;g;450;498
+honing;Honing;breakfast;g;350;948
+chocoladepasta;Chocoladepasta;breakfast;g;400;698
+filterkoffie;Filterkoffie;breakfast;g;250|500;1290
+koffiebonen;Koffiebonen;breakfast;g;500|1000;1490
+zwarte-thee;Zwarte thee;breakfast;pc;20|40;9
+cola;Cola;drinks;ml;1500|6x330;129
+cola-zero;Cola zero;drinks;ml;1500|6x330;129
+sinaasappelsap;Sinaasappelsap;drinks;ml;1000|1500;229
+appelsap;Appelsap;drinks;ml;1000|1500;189
+mineraalwater;Mineraalwater;drinks;ml;1500|6x500;59
+bruisend-water;Bruisend water;drinks;ml;1500;65
+ice-tea;Ice tea;drinks;ml;1500;129
+pils;Pils;drinks;ml;6x300|24x300;199
+witte-wijn;Witte wijn;drinks;ml;750;799
+rode-wijn;Rode wijn;drinks;ml;750;866
+energiedrank;Energiedrank;drinks;ml;250|4x250;439
+chips-naturel;Chips naturel;snacks;g;200|300;895
+chips-paprika;Chips paprika;snacks;g;200|300;895
+borrelnootjes;Borrelnootjes;snacks;g;300;698
+cashewnoten;Cashewnoten;snacks;g;200;1990
+melkchocolade;Melkchocolade;snacks;g;100|200;1190
+stroopwafels;Stroopwafels;snacks;pc;8|10;26
+speculaas;Speculaas;snacks;g;400;448
+popcorn;Popcorn;snacks;g;100;1290
+drop;Drop;snacks;g;300;798
+mueslirepen;Mueslirepen;snacks;pc;6;34
+spinazie-a-la-creme;Spinazie a la creme;frozen;g;450;378
+doperwten;Doperwten;frozen;g;450|1000;398
+pizza-margherita;Pizza margherita;frozen;pc;1|2;249
+patat;Patat;frozen;g;1000|2500;229
+vanille-ijs;Vanille-ijs;frozen;ml;900|1800;398
+frikandellen;Frikandellen;frozen;pc;10|20;29
+bladerdeeg;Bladerdeeg;frozen;g;450;478
+tomatenpuree;Tomatenpuree;pantry;g;70|140;1190
+gepelde-tomaten;Gepelde tomaten;pantry;g;400;248
+kidneybonen;Kidneybonen;pantry;g;400;278
+kikkererwten;Kikkererwten;pantry;g;400;298
+mais;Mais;pantry;g;300;398
+pastasaus;Pastasaus basilicum;pantry;g;500;398
+tomatenketchup;Tomatenketchup;pantry;ml;500|1000;398
+mayonaise;Mayonaise;pantry;ml;500|750;498
+olijfolie;Olijfolie extra vierge;pantry;ml;500|1000;1190
+zonnebloemolie;Zonnebloemolie;pantry;ml;1000;298
+tarwebloem;Tarwebloem;pantry;g;1000;129
+kristalsuiker;Kristalsuiker;pantry;g;1000;169
+zeezout;Zeezout;pantry;g;500;198
+zwarte-peper;Zwarte peper;pantry;g;50;3990
+sojasaus;Sojasaus;pantry;ml;250|500;798
+natuurazijn;Natuurazijn;pantry;ml;1000;119
+bouillonblokjes;Bouillonblokjes;pantry;pc;8|12;19
+kokosmelk;Kokosmelk;pantry;ml;400;498
+satesaus;Satesaus;pantry;ml;500;498
+sambal-oelek;Sambal oelek;pantry;g;200;1190
+toiletpapier;Toiletpapier;household;pc;8|16|24;36
+keukenpapier;Keukenpapier;household;pc;4|8;89
+afwasmiddel;Afwasmiddel;household;ml;500|1000;398
+vaatwastabletten;Vaatwastabletten;household;pc;30|60;16
+wasmiddel;Vloeibaar wasmiddel;household;ml;1000|2000;598
+wasverzachter;Wasverzachter;household;ml;750|1500;398
+allesreiniger;Allesreiniger;household;ml;1000;249
+vuilniszakken;Vuilniszakken;household;pc;20|40;11
+aluminiumfolie;Aluminiumfolie;household;pc;1;198
+batterijen-aa;Batterijen AA;household;pc;4|8;98
+tandpasta;Tandpasta;personal_care;ml;75|2x75;2390
+shampoo;Shampoo;personal_care;ml;250|500;1190
+douchegel;Douchegel;personal_care;ml;250|500;798
+deodorant;Deodorant;personal_care;ml;150;1990
+handzeep;Handzeep;personal_care;ml;300;598
+scheermesjes;Scheermesjes;personal_care;pc;4|8;149
+wattenschijfjes;Wattenschijfjes;personal_care;pc;80;2
+tandenborstel;Tandenborstel;personal_care;pc;1|2;199

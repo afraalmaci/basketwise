@@ -85,7 +85,7 @@ body {
 .content {
   flex: 1;
   display: grid;
-  grid-template-columns: 340px 1fr;
+  grid-template-columns: 380px 1fr;
   min-height: 0;
 }
 
@@ -105,10 +105,108 @@ body {
   line-height: 1.5;
 }
 
+.error {
+  color: var(--error-text);
+}
+
+.dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+/* Search */
+.search__label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.search__input {
+  width: 100%;
+  padding: 10px 12px;
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.search__input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.results {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.result {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.result__name {
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+}
+
+.offers {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+.offers td {
+  padding: 3px 4px;
+  white-space: nowrap;
+}
+.offers__qty {
+  color: var(--muted);
+}
+.offers__price,
+.offers__unit {
+  text-align: right;
+}
+.offers__unit {
+  color: var(--muted);
+}
+.offers__best td {
+  font-weight: 600;
+  background: var(--ok-bg);
+}
+.offers__best .offers__unit {
+  color: var(--ok-text);
+}
+
+/* Map */
+.map-section,
 .map-wrapper,
 .map {
   height: 100%;
   width: 100%;
+}
+.map-wrapper {
+  position: relative;
+}
+.legend {
+  position: absolute;
+  bottom: 24px;
+  left: 12px;
+  z-index: 500; /* above Leaflet panes (400) */
+  list-style: none;
+  margin: 0;
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.8rem;
+  line-height: 1.7;
 }
 
 @media (max-width: 720px) {
@@ -117,10 +215,8 @@ body {
     grid-template-rows: auto 1fr;
   }
   .panel {
+    max-height: 45vh;
     border-right: none;
     border-bottom: 1px solid var(--border);
-  }
-  .map-wrapper {
-    min-height: 60vh;
   }
 }
