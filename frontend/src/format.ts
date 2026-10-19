@@ -12,3 +12,19 @@ const UNIT_LABEL: Record<Unit, string> = { ml: 'L', g: 'kg', pc: 'st' }
 export function formatUnitPrice(cents: number, unit: Unit): string {
   return `${formatPrice(cents)} / ${UNIT_LABEL[unit]}`
 }
+
+/** 412 -> "7 min", 3900 -> "1 h 05 min". Rounded to whole minutes, at least 1. */
+export function formatDuration(seconds: number): string {
+  const minutes = Math.max(1, Math.round(seconds / 60))
+  if (minutes < 60) return `${minutes} min`
+  const hours = Math.floor(minutes / 60)
+  return `${hours} h ${String(minutes % 60).padStart(2, '0')} min`
+}
+
+const kilometers = new Intl.NumberFormat('nl-NL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+
+/** 850 -> "850 m", 2430 -> "2,4 km" (Dutch decimal comma, like the prices). */
+export function formatDistance(meters: number): string {
+  if (meters < 1000) return `${Math.round(meters / 10) * 10} m`
+  return `${kilometers.format(meters / 1000)} km`
+}

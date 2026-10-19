@@ -22,6 +22,7 @@ services:
       DB_USER: ${DB_USER:-basketwise}
       DB_PASSWORD: ${DB_PASSWORD:-basketwise}
       DATA_MODE: demo
+      ORS_API_KEY: ${ORS_API_KEY:-}
     depends_on:
       db:
         condition: service_healthy
@@ -29,7 +30,10 @@ services:
       - "8080:8080"
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        VITE_CARTO_API_KEY: ${VITE_CARTO_API_KEY:-}
     depends_on:
       - backend
     ports:

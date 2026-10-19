@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { Chain, Product } from '../api/catalog'
 import { formatPrice, formatUnitPrice } from '../format'
 import { MIN_QUERY_LENGTH, useProductSearch } from '../hooks/useProductSearch'
+import { SearchIcon } from './icons'
 
 type Props = { chains: Chain[] }
 
@@ -11,19 +12,22 @@ export function ProductSearch({ chains }: Props) {
   const chainByCode = new Map(chains.map((chain) => [chain.code, chain]))
 
   return (
-    <div className="search">
-      <label className="search__label" htmlFor="product-search">
+    <div className="panel-section search">
+      <label className="section-title search__label" htmlFor="product-search">
         Search products
       </label>
-      <input
-        id="product-search"
-        className="search__input"
-        type="search"
-        placeholder="e.g. halfvolle melk"
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-        autoComplete="off"
-      />
+      <div className="search-box">
+        <SearchIcon />
+        <input
+          id="product-search"
+          className="search-box__input"
+          type="search"
+          placeholder="e.g. halfvolle melk"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          autoComplete="off"
+        />
+      </div>
 
       {search.state === 'idle' && query.trim().length > 0 && (
         <p className="muted">Type at least {MIN_QUERY_LENGTH} characters.</p>
