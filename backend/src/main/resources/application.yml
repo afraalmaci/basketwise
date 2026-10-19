@@ -25,4 +25,19 @@ basketwise:
   # Only "demo" exists for now: synthetic stores and prices, safe to deploy publicly.
   data-mode: ${DATA_MODE:demo}
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+        allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:[*],http://127.0.0.1:[*]}
+  routing:
+    ors:
+      # Without a key the app uses straight-line estimates. Free key: https://openrouteservice.org/dev/#/signup
+      api-key: ${ORS_API_KEY:}
+      base-url: ${ORS_BASE_URL:https://api.openrouteservice.org}
+    # Area the demo stores cover. Locations outside it fall back to the default location.
+    service-area:
+      name: Den Haag
+      min-latitude: 52.00
+      min-longitude: 4.18
+      max-latitude: 52.13
+      max-longitude: 4.45
+      # Den Haag Centraal station
+      default-latitude: 52.0809
+      default-longitude: 4.3245

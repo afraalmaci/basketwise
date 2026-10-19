@@ -1,3 +1,5 @@
+import { getJson } from './http'
+
 export type Chain = {
   code: string
   name: string
@@ -33,14 +35,6 @@ export type Product = {
   category: string
   unit: Unit
   offers: Offer[]
-}
-
-async function getJson<T>(url: string, signal?: AbortSignal): Promise<T> {
-  const response = await fetch(url, { signal })
-  if (!response.ok) {
-    throw new Error(`${url} responded with ${response.status}`)
-  }
-  return response.json() as Promise<T>
 }
 
 export const fetchChains = (signal?: AbortSignal) => getJson<Chain[]>('/api/chains', signal)

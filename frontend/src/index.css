@@ -1,17 +1,35 @@
+/*
+ * Layout and look borrowed from navigation apps: a full-screen map, a floating white panel
+ * with soft shadows, a blue accent, a "blue dot" for your location and round map controls.
+ */
 :root {
-  --bg: #f6f7f4;
+  --bg: #ffffff;
   --surface: #ffffff;
-  --text: #1d2420;
-  --muted: #5f6b64;
-  --border: #dde2dc;
-  --accent: #2f7d4f;
-  --ok-bg: #e3f2e8;
-  --ok-text: #1f5c38;
-  --error-bg: #fbe6e4;
-  --error-text: #9b2c22;
-  --muted-bg: #eceee9;
+  --surface-hover: #f1f3f4;
+  --text: #202124;
+  --muted: #5f6368;
+  --border: #dadce0;
+  --accent: #1a73e8;
+  --accent-soft: #e8f0fe;
+  --accent-text: #174ea6;
+  --good: #188038;
+  --ok-bg: #e6f4ea;
+  --ok-text: #137333;
+  --error-bg: #fce8e6;
+  --error-text: #c5221f;
+  --muted-bg: #f1f3f4;
+  --shadow-1: 0 1px 2px rgb(60 64 67 / 0.3), 0 1px 3px 1px rgb(60 64 67 / 0.15);
+  --shadow-2: 0 1px 3px rgb(60 64 67 / 0.3), 0 4px 8px 3px rgb(60 64 67 / 0.15);
 
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  /* Map overlays: the route and your location keep the same blue in both themes. */
+  --route: #4285f4;
+  --route-casing: #1967d2;
+  --route-alt: #a8adb3;
+  --route-alt-casing: #80868b;
+  --location: #4285f4;
+  --marker-stroke: #ffffff;
+
+  font-family: Roboto, system-ui, -apple-system, 'Segoe UI', sans-serif;
   color: var(--text);
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
@@ -19,17 +37,24 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #141816;
-    --surface: #1c211e;
-    --text: #e6ebe7;
-    --muted: #9aa69f;
-    --border: #2c332f;
-    --accent: #5cc184;
-    --ok-bg: #1f3a29;
-    --ok-text: #9fe0b8;
-    --error-bg: #3f1f1c;
-    --error-text: #f2a79f;
-    --muted-bg: #252b27;
+    --bg: #202124;
+    --surface: #292a2d;
+    --surface-hover: #35363a;
+    --text: #e8eaed;
+    --muted: #9aa0a6;
+    --border: #3c4043;
+    --accent: #8ab4f8;
+    --accent-soft: #283a56;
+    --accent-text: #d2e3fc;
+    --good: #81c995;
+    --ok-bg: #1e3a2a;
+    --ok-text: #81c995;
+    --error-bg: #3c1f1e;
+    --error-text: #f28b82;
+    --muted-bg: #35363a;
+    --shadow-1: 0 1px 2px rgb(0 0 0 / 0.5), 0 1px 3px 1px rgb(0 0 0 / 0.3);
+    --shadow-2: 0 1px 3px rgb(0 0 0 / 0.5), 0 4px 8px 3px rgb(0 0 0 / 0.3);
+    --marker-stroke: #202124;
   }
 }
 
@@ -41,31 +66,132 @@ body {
   margin: 0;
 }
 
-.layout {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
+button,
+input {
+  font: inherit;
+  color: inherit;
 }
 
-.header {
+.muted {
+  color: var(--muted);
+  line-height: 1.5;
+}
+.error {
+  color: var(--error-text);
+}
+.dot {
+  display: inline-block;
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---------- Layout ---------- */
+
+.app {
+  position: relative;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.map-section,
+.map-wrapper,
+.map {
+  position: absolute;
+  inset: 0;
+}
+
+.panel {
+  position: absolute;
+  z-index: 1000; /* above Leaflet panes and controls */
+  top: 12px;
+  left: 12px;
+  bottom: 12px;
+  width: 384px;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-radius: 16px;
+  box-shadow: var(--shadow-2);
+  overflow: hidden;
+}
+
+.panel__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 20px;
-  background: var(--surface);
+  padding: 14px 20px 12px;
   border-bottom: 1px solid var(--border);
 }
-
 .logo {
   margin: 0;
-  font-size: 1.25rem;
-  color: var(--accent);
+  font-size: 1.2rem;
+  font-weight: 500;
   letter-spacing: -0.01em;
+  color: var(--accent);
 }
 
-.badge {
+.panel__body {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.panel-section {
+  margin: 0;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.panel-section--flush {
+  padding-left: 0;
+  padding-right: 0;
+}
+.panel-section--flush > .section-subtitle,
+.panel-section--flush > .hint {
+  padding: 0 20px;
+}
+.trip > .panel-section:last-child {
+  border-bottom: 8px solid var(--muted-bg);
+}
+
+.section-title {
+  display: block;
+  margin: 0 0 12px;
+  font-size: 1rem;
+  font-weight: 500;
+}
+.section-subtitle {
+  margin: 0 0 4px;
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.hint {
+  margin: 8px 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+/* ---------- Badges, notices, buttons ---------- */
+
+.badge {
+  font-size: 0.75rem;
+  font-weight: 500;
   padding: 4px 10px;
   border-radius: 999px;
 }
@@ -82,60 +208,300 @@ body {
   color: var(--muted);
 }
 
-.content {
-  flex: 1;
-  display: grid;
-  grid-template-columns: 380px 1fr;
-  min-height: 0;
-}
-
-.panel {
-  padding: 20px;
-  background: var(--surface);
-  border-right: 1px solid var(--border);
-  overflow-y: auto;
-}
-.panel h2 {
-  margin-top: 0;
-  font-size: 1rem;
-}
-
-.muted {
-  color: var(--muted);
-  line-height: 1.5;
-}
-
-.error {
-  color: var(--error-text);
-}
-
-.dot {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  margin-right: 6px;
-  vertical-align: middle;
-}
-
-/* Search */
-.search__label {
-  display: block;
-  font-weight: 600;
-  margin-bottom: 8px;
-}
-.search__input {
-  width: 100%;
+.notice {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 14px 0 0;
   padding: 10px 12px;
-  font: inherit;
-  color: var(--text);
-  background: var(--bg);
-  border: 1px solid var(--border);
+  font-size: 0.85rem;
+  line-height: 1.4;
+  background: var(--accent-soft);
+  color: var(--accent-text);
   border-radius: 8px;
 }
-.search__input:focus {
+.notice svg {
+  flex: none;
+  margin-top: 1px;
+}
+
+.text-button {
+  margin: 10px 0 0;
+  padding: 6px 12px;
+  margin-left: -12px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--accent);
+  background: none;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.text-button:hover {
+  background: var(--accent-soft);
+}
+
+/* ---------- Travel mode tabs ---------- */
+
+.mode-tabs {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+.mode-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px 7px 12px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+  user-select: none;
+}
+.mode-tab:hover {
+  background: var(--surface-hover);
+}
+.mode-tab input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.mode-tab.is-active {
+  color: var(--accent-text);
+  background: var(--accent-soft);
+  border-color: transparent;
+}
+.mode-tab.is-active svg {
+  color: var(--accent);
+}
+.mode-tab:has(input:focus-visible) {
   outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline-offset: 2px;
+}
+
+/* ---------- Place list (nearest stores) ---------- */
+
+.place-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.place {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 20px;
+  cursor: pointer;
+}
+.place:hover {
+  background: var(--surface-hover);
+}
+.place.is-checked {
+  background: var(--accent-soft);
+}
+.place.is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.place__marker {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--surface);
+  box-shadow: 0 0 0 1px var(--border);
+}
+.place__text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.place__name {
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+.place__meta {
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.place__check {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+  cursor: inherit;
+}
+.is-stale {
+  opacity: 0.55;
+  transition: opacity 0.15s;
+}
+
+/* ---------- Route card ---------- */
+
+.route-card__subtitle {
+  margin: 0 0 10px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+/* Route options: like route alternatives in a navigation app. The selected one gets the
+   blue accent that matches its line on the map. */
+.route-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.route-option {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  row-gap: 2px;
+  width: 100%;
+  padding: 10px 12px;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--route-alt);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.route-option:hover {
+  background: var(--surface-hover);
+}
+.route-option:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.route-option.is-active {
+  background: var(--accent-soft);
+  border-color: transparent;
+  border-left-color: var(--route);
+}
+.route-option__time {
+  font-size: 1.05rem;
+  font-weight: 500;
+}
+.route-option.is-active .route-option__time {
+  color: var(--accent-text);
+}
+.route-option__distance {
+  font-weight: 400;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+.route-option__tag {
+  align-self: center;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+.route-option:first-child .route-option__tag {
+  color: var(--good);
+}
+.route-option__via {
+  grid-column: 1 / -1;
+  font-size: 0.8rem;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A vertical line through the stops, with leg times between the nodes. */
+.timeline {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 11px;
+  top: 12px;
+  bottom: 12px;
+  border-left: 3px dotted var(--border);
+}
+.timeline__item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 26px 1fr;
+  column-gap: 14px;
+  align-items: center;
+}
+.timeline__leg {
+  grid-column: 2;
+  padding: 6px 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.timeline__node {
+  grid-column: 1;
+  justify-self: center;
+  z-index: 1;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--location);
+  border: 3px solid var(--surface);
+  box-shadow: 0 0 0 1px var(--location);
+}
+.timeline__node--stop {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--surface);
+  box-shadow: var(--shadow-1);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.timeline__name {
+  grid-column: 2;
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 2px 0;
+}
+.timeline__item--origin .timeline__name {
+  font-weight: 400;
+  color: var(--muted);
+}
+.route-card .hint {
+  margin-top: 14px;
+}
+
+/* ---------- Product search ---------- */
+
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  height: 46px;
+  color: var(--muted);
+  background: var(--surface);
+  border-radius: 999px;
+  box-shadow: var(--shadow-1);
+}
+.search-box:focus-within {
+  box-shadow: var(--shadow-2);
+}
+.search-box__input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  color: var(--text);
+  background: none;
+  border: none;
+  outline: none;
 }
 
 .results {
@@ -144,18 +510,18 @@ body {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 .result {
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 10px 12px;
 }
 .result__name {
   margin: 0 0 6px;
   font-size: 0.95rem;
+  font-weight: 500;
 }
-
 .offers {
   width: 100%;
   border-collapse: collapse;
@@ -177,46 +543,260 @@ body {
   color: var(--muted);
 }
 .offers__best td {
-  font-weight: 600;
+  font-weight: 500;
   background: var(--ok-bg);
 }
 .offers__best .offers__unit {
   color: var(--ok-text);
 }
 
-/* Map */
-.map-section,
-.map-wrapper,
-.map {
-  height: 100%;
-  width: 100%;
-}
-.map-wrapper {
-  position: relative;
-}
-.legend {
+/* ---------- Map overlays ---------- */
+
+/* Chain chips across the top of the map, next to the panel. */
+.chips {
   position: absolute;
-  bottom: 24px;
-  left: 12px;
-  z-index: 500; /* above Leaflet panes (400) */
-  list-style: none;
+  z-index: 500;
+  top: 12px;
+  left: 408px;
+  right: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   margin: 0;
-  padding: 8px 12px;
+  padding: 0;
+  list-style: none;
+  pointer-events: none;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  font-size: 0.8rem;
-  line-height: 1.7;
+  border-radius: 999px;
+  box-shadow: var(--shadow-1);
+  pointer-events: auto;
+}
+.chip__count {
+  margin-left: 6px;
+  color: var(--muted);
+  font-weight: 400;
 }
 
-@media (max-width: 720px) {
-  .content {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto 1fr;
+/* Leaflet draws SVG paths; CSS properties override its presentation attributes. */
+.store-dot {
+  stroke: var(--marker-stroke);
+}
+.route-line {
+  stroke: var(--route);
+}
+.route-casing {
+  stroke: var(--route-casing);
+}
+.route-alt-line {
+  stroke: var(--route-alt);
+  cursor: pointer;
+}
+.route-alt-casing {
+  stroke: var(--route-alt-casing);
+  cursor: pointer;
+}
+.service-area {
+  stroke: var(--muted);
+}
+.accuracy-halo {
+  fill: var(--location);
+}
+
+/* Your location: the familiar blue dot with a white ring and a slow pulse. */
+.origin-dot {
+  background: none;
+  border: none;
+}
+.origin-dot__core {
+  position: relative;
+  display: block;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--location);
+  border: 3px solid #fff;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.4);
+  cursor: grab;
+}
+.origin-dot__core::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 2px solid var(--location);
+  animation: pulse 2s ease-out infinite;
+}
+@keyframes pulse {
+  from {
+    transform: scale(1);
+    opacity: 0.6;
   }
+  to {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .origin-dot__core::after {
+    animation: none;
+  }
+}
+
+/* Chosen stores: teardrop pins in the chain color, numbered in visiting order. */
+.store-pin {
+  background: none;
+  border: none;
+}
+.store-pin__body {
+  position: absolute;
+  left: 1px;
+  top: 1px;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  border: 2px solid #fff;
+  box-shadow: 0 2px 4px rgb(0 0 0 / 0.35);
+}
+.store-pin__body span {
+  transform: rotate(45deg);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.store-pin__body span:empty::before {
+  content: '';
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fff;
+}
+
+/* Round, shadowed map controls. Prefixed with .leaflet-container to win over leaflet.css,
+   which loads after this file. */
+.leaflet-container .leaflet-control-zoom.leaflet-bar {
+  border: none;
+  border-radius: 8px;
+  box-shadow: var(--shadow-1);
+  overflow: hidden;
+}
+.leaflet-container .leaflet-bar.leaflet-control-zoom a {
+  width: 40px;
+  height: 40px;
+  line-height: 40px;
+  font-size: 20px;
+  color: var(--muted);
+  background: var(--surface);
+  border-bottom-color: var(--border);
+}
+.leaflet-container .leaflet-bar.leaflet-control-zoom a:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+.leaflet-bottom.leaflet-right .leaflet-control-zoom {
+  margin: 0 12px 28px 0;
+}
+.map-control {
+  position: absolute;
+  z-index: 1000;
+  right: 12px;
+  bottom: 132px;
+}
+.map-control button {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  color: var(--accent);
+  background: var(--surface);
+  border: none;
+  border-radius: 8px;
+  box-shadow: var(--shadow-1);
+  cursor: pointer;
+}
+.map-control button:hover {
+  background: var(--surface-hover);
+}
+
+.leaflet-container .leaflet-control-attribution {
+  color: var(--muted);
+  background: color-mix(in srgb, var(--surface) 80%, transparent);
+}
+.leaflet-container .leaflet-control-attribution a {
+  color: var(--accent);
+}
+.leaflet-tooltip {
+  font-family: inherit;
+  font-weight: 500;
+  border: none;
+  border-radius: 6px;
+  box-shadow: var(--shadow-1);
+}
+.leaflet-container {
+  font-family: inherit;
+  background: var(--muted-bg);
+}
+/* Dark mode without a CARTO key: a darkened OpenStreetMap. Only the tiles are filtered,
+   markers and the route keep their real colors. */
+.map-wrapper--darken-tiles .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.85) saturate(0.6);
+}
+
+/* ---------- Mobile: the panel becomes a bottom sheet ---------- */
+
+@media (max-width: 720px) {
   .panel {
-    max-height: 45vh;
-    border-right: none;
-    border-bottom: 1px solid var(--border);
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: auto;
+    max-height: 52vh;
+    border-radius: 16px 16px 0 0;
+  }
+  .panel__header::before {
+    content: '';
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    width: 36px;
+    height: 4px;
+    margin-left: -18px;
+    border-radius: 2px;
+    background: var(--border);
+  }
+  .chips {
+    left: 0;
+    right: 0;
+    padding: 0 12px 6px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    pointer-events: auto;
+  }
+  .chip {
+    flex: none;
+  }
+  .map-control {
+    bottom: auto;
+    top: 56px;
+  }
+  .leaflet-bottom.leaflet-right .leaflet-control-zoom {
+    display: none; /* pinch to zoom on phones */
+  }
+  .leaflet-bottom {
+    bottom: 52vh; /* keep the map attribution visible above the sheet */
   }
 }
