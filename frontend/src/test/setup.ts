@@ -5,4 +5,6 @@ import { afterEach } from 'vitest'
 // Testing Library only auto-cleans when test globals are enabled; we import explicitly instead.
 afterEach(() => {
   cleanup()
+  // The shopping list lives in localStorage; every test starts with an empty one.
+  localStorage.clear()
 })

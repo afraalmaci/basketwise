@@ -14,7 +14,7 @@ import {
   useMap,
 } from 'react-leaflet'
 import type { Chain, Store } from '../api/catalog'
-import type { LatLng, ServiceArea, TripOption } from '../api/routing'
+import type { LatLng, ServiceArea } from '../api/routing'
 import type { Origin, OriginSource } from '../location'
 import { tileSource } from '../tiles'
 import { MyLocationIcon } from './icons'
@@ -41,6 +41,14 @@ function pinIcon(color: string, label: string | null): L.DivIcon {
   })
 }
 
+/** What the map needs to draw a route: the line, and the stops to number. */
+export type MapRoute = {
+  stops: { storeId: number }[]
+  geometry: [number, number][]
+  /** Straight-line estimate: drawn dotted so it never passes for a real path. */
+  estimated: boolean
+}
+
 type Props = {
   chains: Chain[]
   stores: Store[]
@@ -50,12 +58,10 @@ type Props = {
   onLocate?: () => void
   canLocate?: boolean
   serviceArea?: ServiceArea | null
-  selectedStoreIds?: number[]
-  onStoreClick?: (storeId: number) => void
-  /** Trip options, fastest first. The active one is drawn blue, the others gray. */
-  tripOptions?: TripOption[]
-  activeOption?: number
-  onSelectOption?: (index: number) => void
+  /** Plans' routes, best first. The active one is drawn blue, the others gray. */
+  routes?: MapRoute[]
+  activeRoute?: number
+  onSelectRoute?: (index: number) => void
   /** The floating panel. Centering accounts for it, so the target is not hidden behind it. */
   coveredBy?: RefObject<HTMLElement | null>
 }
@@ -68,17 +74,15 @@ export function MapView({
   onLocate,
   canLocate = false,
   serviceArea = null,
-  selectedStoreIds = [],
-  onStoreClick,
-  tripOptions = [],
-  activeOption = 0,
-  onSelectOption,
+  routes = [],
+  activeRoute = 0,
+  onSelectRoute,
   coveredBy,
 }: Props) {
   const dark = usePrefersDark()
   const tiles = tileSource(dark)
   const colorByChain = new Map(chains.map((chain) => [chain.code, chain.color]))
-  const active = tripOptions[activeOption] ?? tripOptions[0] ?? null
+  const active = routes[activeRoute] ?? routes[0] ?? null
   const stopNumber = new Map(active?.stops.map((stop, index) => [stop.storeId, index + 1]) ?? [])
 
   return (
@@ -104,33 +108,30 @@ export function MapView({
         )}
 
         {/* Alternatives first, so the active route is drawn on top of them. */}
-        {tripOptions.map((option, index) =>
-          index === activeOption ? null : (
+        {routes.map((route, index) =>
+          index === activeRoute ? null : (
             <RouteLine
               key={`alt-${index}`}
-              option={option}
+              route={route}
               active={false}
-              onClick={onSelectOption ? () => onSelectOption(index) : undefined}
+              onClick={onSelectRoute ? () => onSelectRoute(index) : undefined}
             />
           ),
         )}
-        {active && <RouteLine key={`active-${activeOption}`} option={active} active />}
+        {active && <RouteLine key={`active-${activeRoute}`} route={active} active />}
 
         {stores.map((store) => {
           const color = colorByChain.get(store.chainCode) ?? '#666'
-          const selected = selectedStoreIds.includes(store.id)
           const number = stopNumber.get(store.id)
-          const click = onStoreClick ? { click: () => onStoreClick(store.id) } : undefined
 
-          // Stops of the shown route (or, before a route exists, the chosen stores) become
-          // pins; the rest stay small dots, like points of interest.
-          if (number !== undefined || (selected && !active)) {
+          // Stops of the shown route become numbered pins; the rest stay small dots, like
+          // points of interest.
+          if (number !== undefined) {
             return (
               <Marker
                 key={store.id}
                 position={[store.latitude, store.longitude]}
-                icon={pinIcon(color, number !== undefined ? String(number) : null)}
-                eventHandlers={click}
+                icon={pinIcon(color, String(number))}
                 zIndexOffset={500}
               >
                 <Tooltip direction="top">{store.name}</Tooltip>
@@ -143,7 +144,6 @@ export function MapView({
               center={[store.latitude, store.longitude]}
               radius={7}
               pathOptions={{ className: 'store-dot', weight: 2, fillColor: color, fillOpacity: 1 }}
-              eventHandlers={click}
             >
               <Tooltip direction="top">{store.name}</Tooltip>
             </CircleMarker>
@@ -176,7 +176,7 @@ export function MapView({
         )}
 
         {origin && <Recenter origin={origin} coveredBy={coveredBy} />}
-        <FitRoutes options={tripOptions} coveredBy={coveredBy} />
+        <FitRoutes routes={routes} coveredBy={coveredBy} />
         {origin && canLocate && onLocate && <LocateButton origin={origin} onLocate={onLocate} coveredBy={coveredBy} />}
       </MapContainer>
 
@@ -195,20 +195,20 @@ export function MapView({
   )
 }
 
-type RouteLineProps = { option: TripOption; active: boolean; onClick?: () => void }
+type RouteLineProps = { route: MapRoute; active: boolean; onClick?: () => void }
 
 /**
  * Route in the style of navigation apps: a darker casing under a bright line, blue for the
  * route shown in detail and gray for alternatives (click one to show it instead). An
  * estimate (straight lines, no routing API) is drawn dotted so it never passes for a real path.
  */
-function RouteLine({ option, active, onClick }: RouteLineProps) {
+function RouteLine({ route, active, onClick }: RouteLineProps) {
   const tone = active ? 'route' : 'route-alt'
   const events = onClick ? { click: onClick } : undefined
-  if (option.estimated) {
+  if (route.estimated) {
     return (
       <Polyline
-        positions={option.geometry}
+        positions={route.geometry}
         pathOptions={{ className: `${tone}-line`, weight: active ? 5 : 4, dashArray: '2 10', lineCap: 'round' }}
         eventHandlers={events}
       />
@@ -217,12 +217,12 @@ function RouteLine({ option, active, onClick }: RouteLineProps) {
   return (
     <>
       <Polyline
-        positions={option.geometry}
+        positions={route.geometry}
         pathOptions={{ className: `${tone}-casing`, weight: 9, lineJoin: 'round' }}
         eventHandlers={events}
       />
       <Polyline
-        positions={option.geometry}
+        positions={route.geometry}
         pathOptions={{ className: `${tone}-line`, weight: 6, lineJoin: 'round' }}
         eventHandlers={events}
       />
@@ -251,13 +251,13 @@ function Recenter({ origin, coveredBy }: { origin: Origin; coveredBy?: RefObject
 }
 
 /**
- * When new trip options arrive, zooms the map so every route is visible, keeping clear of
- * the panel. Selecting another option does not move the map: the routes stay the same.
+ * When new routes arrive, zooms the map so every route is visible, keeping clear of the
+ * panel. Selecting another plan does not move the map: the routes stay the same.
  */
-function FitRoutes({ options, coveredBy }: { options: TripOption[]; coveredBy?: RefObject<HTMLElement | null> }) {
+function FitRoutes({ routes, coveredBy }: { routes: MapRoute[]; coveredBy?: RefObject<HTMLElement | null> }) {
   const map = useMap()
   // A string of all coordinates: changes only when the routes themselves change.
-  const signature = options.map((option) => option.geometry.map((point) => point.join(',')).join(';')).join('|')
+  const signature = routes.map((route) => route.geometry.map((point) => point.join(',')).join(';')).join('|')
 
   useEffect(() => {
     if (!signature) return

@@ -12,9 +12,9 @@ so you can see whether visiting a second store is actually worth the extra time.
 
 | Module | Problem it solves |
 |---|---|
-| **Optimization engine** | Picks which store to buy each item from, respecting pack sizes and a max number of stores. Exact search over store subsets, verified with property-based tests. |
-| **Routing** | Uses your browser location (or a draggable pin), finds each chain's nearest store by travel time, and plans round trips through up to 3 stores by bike or on foot: the fastest in blue, alternatives (other orders, sibling branches) in gray. |
-| **Route-aware optimizer** *(next)* | Adds travel time to the cost function: decides which stores are worth the detour for a given shopping list. |
+| **Route-aware optimizer** | Splits a shopping list across up to 3 stores and decides whether each extra store is worth the detour: score = basket price + travel time × the value of your time (Lowest price / Balanced / Least time). Exact search over chain subsets, checked against brute force on random inputs. |
+| **Pack selection** | "2 L of milk" when stores sell 1 L and 1.5 L packs: dynamic programming finds the cheapest packs that cover the need, buying a little extra when that is cheaper (a 6 × 33 cl multipack can beat 1.5 L bottles). |
+| **Routing** | Uses your browser location (or a draggable pin) and real bike or walking times. One travel-time matrix per optimization; the round trip through each store combination comes from an exact tour planner that also considers sibling branches. |
 | **Unit normalization** | Parses messy quantity strings (`1L`, `1000 ml`, `6 x 0,33 L`) into comparable unit prices (EUR/L, EUR/kg). |
 | **Product search** | Fuzzy search with PostgreSQL `pg_trgm`. |
 
@@ -91,10 +91,11 @@ cd frontend && npm test
 | `GET /api/products/search?q=melk` | Fuzzy product search; every hit includes each chain's offers with normalized unit prices |
 | `GET /api/routing/config` | Demo service area, default location, travel modes, max stops |
 | `GET /api/routing/nearest?lat=52.08&lon=4.32&mode=bike` | Nearest store of each chain by travel time |
+| `POST /api/optimize` | Where to buy a shopping list: `{"origin": {"latitude": 52.08, "longitude": 4.32}, "mode": "bike", "valueOfTimeEurPerHour": 10, "items": [{"productId": 1, "quantity": 2000}]}`. Quantities are in ml, g or pieces. Returns the best plan for each number of stores, best first, with packs per store and the route. |
 | `POST /api/routing/trip` | Round trips through 1 to 3 stores, fastest first plus up to two alternatives (other visiting orders or nearby branches of the same chains): `{"origin": {"latitude": 52.08, "longitude": 4.32}, "storeIds": [3, 12], "mode": "walk"}` |
 | `GET /api/system/info` | Data mode and database status |
 
-Your location is only used to answer routing requests: it is not stored or logged.
+Your location is only used to answer routing and optimization requests: it is not stored or logged. Your shopping list stays in your browser (localStorage).
 
 ## Demo data
 

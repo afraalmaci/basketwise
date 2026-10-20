@@ -1,6 +1,7 @@
 import { vi } from 'vitest'
 import type { Chain, Product, Store } from '../api/catalog'
-import type { NearestStores, RoutingConfig, TripPlan } from '../api/routing'
+import type { OptimizeResponse } from '../api/planning'
+import type { NearestStores, RoutingConfig } from '../api/routing'
 
 export const chains: Chain[] = [
   { code: 'BUDGETBAAS', name: 'Budgetbaas', color: '#d97706', storeCount: 1 },
@@ -47,24 +48,69 @@ export const nearestStores: NearestStores = {
   ],
 }
 
-/** The fastest option, then an alternative that uses another Hoekwinkel branch. */
-export const tripPlan: TripPlan = {
+/**
+ * The optimizer's answer for milk + eggs: two stores is best (cheaper, 9 minutes more),
+ * one store is the alternative.
+ */
+export const optimizeResponse: OptimizeResponse = {
   mode: 'bike',
+  valueOfTimeEurPerHour: 10,
   estimated: true,
-  options: [
+  combinationsChecked: 3,
+  unavailable: [],
+  plans: [
     {
+      storeCount: 2,
+      basketCents: 498,
+      travelSeconds: 1500,
+      travelDistanceMeters: 6250,
+      timeCostCents: 417,
+      scoreCents: 915,
       stops: [
-        { storeId: 2, chainCode: 'HOEKWINKEL', storeName: 'Hoekwinkel Centrum', latitude: 52.07, longitude: 4.31 },
-        { storeId: 1, chainCode: 'BUDGETBAAS', storeName: 'Budgetbaas Moerwijk', latitude: 52.05, longitude: 4.29 },
+        {
+          storeId: 2,
+          chainCode: 'HOEKWINKEL',
+          storeName: 'Hoekwinkel Centrum',
+          latitude: 52.07,
+          longitude: 4.31,
+          subtotalCents: 349,
+          items: [
+            {
+              productId: 2,
+              name: 'Scharreleieren',
+              unit: 'pc',
+              neededAmount: 10,
+              boughtAmount: 10,
+              costCents: 349,
+              packs: [{ displayName: 'Scharreleieren', quantityText: '10 stuks', amount: 10, priceCents: 349, count: 1 }],
+            },
+          ],
+        },
+        {
+          storeId: 1,
+          chainCode: 'BUDGETBAAS',
+          storeName: 'Budgetbaas Moerwijk',
+          latitude: 52.05,
+          longitude: 4.29,
+          subtotalCents: 149,
+          items: [
+            {
+              productId: 1,
+              name: 'Halfvolle melk',
+              unit: 'ml',
+              neededAmount: 1000,
+              boughtAmount: 1500,
+              costCents: 129,
+              packs: [{ displayName: 'BB Halfvolle melk', quantityText: '1,5 L', amount: 1500, priceCents: 129, count: 1 }],
+            },
+          ],
+        },
       ],
       legs: [
         { durationSeconds: 300, distanceMeters: 1240 },
-        { durationSeconds: 720, distanceMeters: 2900 },
+        { durationSeconds: 300, distanceMeters: 1250 },
         { durationSeconds: 900, distanceMeters: 3760 },
       ],
-      totalDurationSeconds: 1920,
-      totalDistanceMeters: 7900,
-      extraSeconds: 0,
       estimated: true,
       geometry: [
         [52.0809, 4.3245],
@@ -74,26 +120,45 @@ export const tripPlan: TripPlan = {
       ],
     },
     {
+      storeCount: 1,
+      basketCents: 738,
+      travelSeconds: 960,
+      travelDistanceMeters: 2480,
+      timeCostCents: 267,
+      scoreCents: 1005,
       stops: [
-        { storeId: 3, chainCode: 'HOEKWINKEL', storeName: 'Hoekwinkel Laak', latitude: 52.064, longitude: 4.327 },
-        { storeId: 1, chainCode: 'BUDGETBAAS', storeName: 'Budgetbaas Moerwijk', latitude: 52.05, longitude: 4.29 },
+        {
+          storeId: 2,
+          chainCode: 'HOEKWINKEL',
+          storeName: 'Hoekwinkel Centrum',
+          latitude: 52.07,
+          longitude: 4.31,
+          subtotalCents: 738,
+          items: [],
+        },
       ],
       legs: [
-        { durationSeconds: 420, distanceMeters: 1750 },
-        { durationSeconds: 780, distanceMeters: 3200 },
-        { durationSeconds: 900, distanceMeters: 3760 },
+        { durationSeconds: 480, distanceMeters: 1240 },
+        { durationSeconds: 480, distanceMeters: 1240 },
       ],
-      totalDurationSeconds: 2100,
-      totalDistanceMeters: 8710,
-      extraSeconds: 180,
       estimated: true,
       geometry: [
         [52.0809, 4.3245],
-        [52.064, 4.327],
-        [52.05, 4.29],
+        [52.07, 4.31],
         [52.0809, 4.3245],
       ],
     },
+  ],
+}
+
+export const eggs: Product = {
+  id: 2,
+  slug: 'scharreleieren',
+  name: 'Scharreleieren',
+  category: 'dairy',
+  unit: 'pc',
+  offers: [
+    { chainCode: 'HOEKWINKEL', displayName: 'Scharreleieren', quantityText: '10 stuks', quantityAmount: 10, priceCents: 349, unitPriceCents: 35 },
   ],
 }
 
@@ -118,7 +183,7 @@ export const healthyApi: Routes = {
   '/api/products/search': { ok: true, body: [milk] },
   '/api/routing/config': { ok: true, body: routingConfig },
   '/api/routing/nearest': { ok: true, body: nearestStores },
-  '/api/routing/trip': { ok: true, body: tripPlan },
+  '/api/optimize': { ok: true, body: optimizeResponse },
 }
 
 /** URLs of all fetch calls that start with the prefix, in order. */
