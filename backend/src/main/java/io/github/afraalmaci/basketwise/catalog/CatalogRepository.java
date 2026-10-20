@@ -6,7 +6,10 @@ import io.github.afraalmaci.basketwise.catalog.CatalogDtos.ProductDto;
 import io.github.afraalmaci.basketwise.catalog.CatalogDtos.StoreDto;
 import io.github.afraalmaci.basketwise.normalization.BaseUnit;
 import io.github.afraalmaci.basketwise.normalization.Quantity;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -68,9 +71,7 @@ public class CatalogRepository {
                 .addValue("threshold", FUZZY_THRESHOLD)
                 .addValue("limit", limit);
 
-        record Row(long id, String slug, String name, String category, String unit) {
-        }
-        List<Row> rows = jdbc.query("""
+        List<ProductRow> rows = jdbc.query("""
                 SELECT id, slug, name, category, unit
                 FROM product
                 WHERE name ILIKE '%' || :pattern || '%'
@@ -82,16 +83,43 @@ public class CatalogRepository {
                 LIMIT :limit
                 """,
                 params,
-                (rs, i) -> new Row(rs.getLong("id"), rs.getString("slug"), rs.getString("name"),
-                        rs.getString("category"), rs.getString("unit")));
+                CatalogRepository::productRow);
+        return withOffers(rows);
+    }
 
+    /** Products by id, with all their offers. Unknown ids are simply missing from the result. */
+    public List<ProductDto> findProducts(Collection<Long> ids) {
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+        List<ProductRow> rows = jdbc.query("""
+                SELECT id, slug, name, category, unit
+                FROM product
+                WHERE id IN (:ids)
+                ORDER BY id
+                """,
+                new MapSqlParameterSource("ids", ids),
+                CatalogRepository::productRow);
+        return withOffers(rows);
+    }
+
+    private record ProductRow(long id, String slug, String name, String category, String unit) {
+    }
+
+    private static ProductRow productRow(ResultSet rs, int rowNum) throws SQLException {
+        return new ProductRow(rs.getLong("id"), rs.getString("slug"), rs.getString("name"),
+                rs.getString("category"), rs.getString("unit"));
+    }
+
+    /** Loads the offers of the given products in one query, cheapest unit price first. */
+    private List<ProductDto> withOffers(List<ProductRow> rows) {
         if (rows.isEmpty()) {
             return List.of();
         }
 
         Map<Long, List<OfferDto>> offersByProduct = new LinkedHashMap<>();
         Map<Long, BaseUnit> units = new LinkedHashMap<>();
-        for (Row row : rows) {
+        for (ProductRow row : rows) {
             offersByProduct.put(row.id(), new ArrayList<>());
             units.put(row.id(), BaseUnit.fromCode(row.unit()));
         }
