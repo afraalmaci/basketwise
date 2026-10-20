@@ -1,28 +1,16 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import type { Store } from './api/catalog'
-import type { TripOption } from './api/routing'
 import type { Origin } from './location'
-import { callsTo, healthyApi, mockApi, mockGeolocation, routingConfig } from './test/fixtures'
+import { callsTo, healthyApi, mockApi, mockGeolocation } from './test/fixtures'
 
 // Leaflet needs a real layout engine. The fake map prints what it was given instead.
 vi.mock('./components/MapView', () => ({
-  MapView: ({
-    stores,
-    origin,
-    tripOptions = [],
-    activeOption = 0,
-  }: {
-    stores: Store[]
-    origin: Origin | null
-    tripOptions?: TripOption[]
-    activeOption?: number
-  }) => (
+  MapView: ({ stores, origin }: { stores: Store[]; origin: Origin | null }) => (
     <div data-testid="map">
-      {stores.length} stores; origin {origin ? `${origin.position.latitude},${origin.position.longitude} (${origin.source})` : 'none'};
-      {tripOptions.length > 0 ? ` ${tripOptions.length} routes, active ${activeOption}` : ' no route'}
+      {stores.length} stores; origin {origin ? `${origin.position.latitude},${origin.position.longitude} (${origin.source})` : 'none'}
     </div>
   ),
 }))
@@ -91,67 +79,9 @@ describe('App routing', () => {
 
     render(<App />)
 
-    const row = (await screen.findByText('Hoekwinkel Centrum')).closest('label')!
+    const row = (await screen.findByText('Hoekwinkel Centrum')).closest('li')!
     expect(row).toHaveTextContent('5 min · 1,2 km')
     expect(screen.getByText(/Times are straight-line estimates/)).toBeInTheDocument()
-  })
-
-  it('plans a trip for the selected stores', async () => {
-    restoreGeolocation = mockGeolocation({ kind: 'denied' })
-    const fetchMock = mockApi(healthyApi)
-    render(<App />)
-
-    await userEvent.click(await screen.findByRole('checkbox', { name: /Budgetbaas Moerwijk/ }))
-    await userEvent.click(screen.getByRole('checkbox', { name: /Hoekwinkel Centrum/ }))
-
-    expect(await screen.findByText('Round trip · 2 stops')).toBeInTheDocument()
-    const options = within(screen.getByRole('radiogroup', { name: 'Route options' })).getAllByRole('radio')
-    expect(options.map((option) => option.textContent)).toEqual([
-      '32 min · 7,9 kmFastestvia Hoekwinkel Centrum → Budgetbaas Moerwijk',
-      '35 min · 8,7 km+3 minvia Hoekwinkel Laak → Budgetbaas Moerwijk',
-    ])
-    expect(options[0]).toHaveAttribute('aria-checked', 'true')
-
-    const timeline = screen.getByRole('list', { name: 'Trip stops' })
-    const items = within(timeline).getAllByRole('listitem')
-    expect(items.map((item) => item.querySelector('.timeline__name')?.textContent)).toEqual([
-      'Your location',
-      'Hoekwinkel Centrum',
-      'Budgetbaas Moerwijk',
-      'Back to start',
-    ])
-    expect(items.map((item) => item.querySelector('.timeline__leg')?.textContent ?? null)).toEqual([
-      null,
-      '5 min',
-      '12 min',
-      '15 min',
-    ])
-    expect(screen.getByTestId('map')).toHaveTextContent('2 routes, active 0')
-
-    // The selection is sent sorted, whatever order it was clicked in.
-    const tripCalls = fetchMock.mock.calls.filter(([url]) => url.toString() === '/api/routing/trip')
-    const lastBody = JSON.parse(String(tripCalls[tripCalls.length - 1][1]?.body))
-    expect(lastBody).toEqual({
-      origin: { latitude: 52.0809, longitude: 4.3245 },
-      storeIds: [1, 2],
-      mode: 'bike',
-    })
-  })
-
-  it('shows an alternative route when it is selected', async () => {
-    restoreGeolocation = mockGeolocation({ kind: 'denied' })
-    mockApi(healthyApi)
-    render(<App />)
-    await userEvent.click(await screen.findByRole('checkbox', { name: /Hoekwinkel Centrum/ }))
-
-    await userEvent.click(await screen.findByRole('radio', { name: /Hoekwinkel Laak/ }))
-
-    expect(screen.getByRole('radio', { name: /Hoekwinkel Laak/ })).toHaveAttribute('aria-checked', 'true')
-    const names = within(screen.getByRole('list', { name: 'Trip stops' }))
-      .getAllByRole('listitem')
-      .map((item) => item.querySelector('.timeline__name')?.textContent)
-    expect(names).toContain('Hoekwinkel Laak')
-    expect(screen.getByTestId('map')).toHaveTextContent('2 routes, active 1')
   })
 
   it('asks again for walking times when the mode changes', async () => {
@@ -168,17 +98,6 @@ describe('App routing', () => {
         '/api/routing/nearest?lat=52.0809&lon=4.3245&mode=walk',
       ]),
     )
-  })
-
-  it('does not allow more stores than the maximum', async () => {
-    restoreGeolocation = mockGeolocation({ kind: 'denied' })
-    mockApi({ ...healthyApi, '/api/routing/config': { ok: true, body: { ...routingConfig, maxStops: 1 } } })
-    render(<App />)
-
-    await userEvent.click(await screen.findByRole('checkbox', { name: /Hoekwinkel Centrum/ }))
-
-    expect(screen.getByRole('checkbox', { name: /Budgetbaas Moerwijk/ })).toBeDisabled()
-    expect(screen.getByText(/Pick up to 1 stores/)).toBeInTheDocument()
   })
 
   it('shows the server explanation when a request is rejected', async () => {

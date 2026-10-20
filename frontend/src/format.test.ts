@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatDistance, formatDuration, formatPrice, formatUnitPrice } from './format'
+import { formatDistance, formatDuration, formatPrice, formatQuantity, formatUnitPrice } from './format'
 
 // Intl uses a non-breaking space between the euro sign and the amount.
 const normalize = (text: string) => text.replace(/ /g, ' ')
@@ -27,5 +27,14 @@ describe('format', () => {
     expect(formatDistance(847)).toBe('850 m')
     expect(formatDistance(1000)).toBe('1,0 km')
     expect(formatDistance(2430)).toBe('2,4 km')
+  })
+
+  it('formats list quantities in the unit people use', () => {
+    expect(formatQuantity(750, 'ml')).toBe('750 ml')
+    expect(formatQuantity(1000, 'ml')).toBe('1 L')
+    expect(formatQuantity(1500, 'ml')).toBe('1,5 L')
+    expect(formatQuantity(400, 'g')).toBe('400 g')
+    expect(formatQuantity(2500, 'g')).toBe('2,5 kg')
+    expect(formatQuantity(6, 'pc')).toBe('6 st')
   })
 })

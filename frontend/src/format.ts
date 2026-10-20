@@ -28,3 +28,12 @@ export function formatDistance(meters: number): string {
   if (meters < 1000) return `${Math.round(meters / 10) * 10} m`
   return `${kilometers.format(meters / 1000)} km`
 }
+
+const decimal = new Intl.NumberFormat('nl-NL', { maximumFractionDigits: 2 })
+
+/** 750 ml -> "750 ml", 1500 ml -> "1,5 L", 2000 g -> "2 kg", 6 pc -> "6 st". */
+export function formatQuantity(amount: number, unit: Unit): string {
+  if (unit === 'pc') return `${amount} st`
+  const [small, large] = unit === 'ml' ? ['ml', 'L'] : ['g', 'kg']
+  return amount < 1000 ? `${amount} ${small}` : `${decimal.format(amount / 1000)} ${large}`
+}

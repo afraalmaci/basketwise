@@ -1,9 +1,12 @@
 import { useRef } from 'react'
 import { MapView } from './components/MapView'
-import { ProductSearch } from './components/ProductSearch'
+import { PlanResults } from './components/PlanResults'
+import { ShoppingListPanel } from './components/ShoppingListPanel'
 import { StatusBadge } from './components/StatusBadge'
-import { TripPanel } from './components/TripPanel'
+import { NearestList, TripPanel } from './components/TripPanel'
+import { useBasketPlanner } from './hooks/useBasketPlanner'
 import { useCatalog } from './hooks/useCatalog'
+import { useShoppingList } from './hooks/useShoppingList'
 import { useSystemInfo } from './hooks/useSystemInfo'
 import { useTripPlanner } from './hooks/useTripPlanner'
 import { isInServiceArea } from './location'
@@ -11,13 +14,18 @@ import { isInServiceArea } from './location'
 function App() {
   const status = useSystemInfo()
   const { chains, stores, error } = useCatalog()
-  const planner = useTripPlanner()
+  const trip = useTripPlanner()
+  const list = useShoppingList()
+  const basket = useBasketPlanner(list.items, trip.origin, trip.mode)
   const panelRef = useRef<HTMLElement>(null)
 
-  const tripOptions = planner.trip.state === 'done' ? planner.trip.data.options : []
-  const serviceArea = planner.config.state === 'done' ? planner.config.data.serviceArea : null
-  const geo = planner.geolocation
-  const canLocate = geo.status === 'granted' && serviceArea !== null && isInServiceArea(geo.position, serviceArea)
+  // While a new answer loads, the map keeps showing the previous routes instead of flashing empty.
+  const optimized =
+    basket.result.state === 'done' ? basket.result.data : basket.result.state === 'loading' ? basket.result.previous : null
+  const routes = list.items.length > 0 && optimized ? optimized.plans : []
+  const config = trip.config.state === 'done' ? trip.config.data : null
+  const geo = trip.geolocation
+  const canLocate = geo.status === 'granted' && config !== null && isInServiceArea(geo.position, config.serviceArea)
 
   // Full-screen map with a floating panel on top, like a navigation app.
   return (
@@ -26,16 +34,14 @@ function App() {
         <MapView
           chains={chains}
           stores={stores}
-          origin={planner.origin}
-          onOriginChange={planner.moveOrigin}
-          onLocate={planner.resetOrigin}
+          origin={trip.origin}
+          onOriginChange={trip.moveOrigin}
+          onLocate={trip.resetOrigin}
           canLocate={canLocate}
-          serviceArea={serviceArea}
-          selectedStoreIds={planner.selectedStoreIds}
-          onStoreClick={planner.toggleStore}
-          tripOptions={tripOptions}
-          activeOption={planner.activeOption}
-          onSelectOption={planner.selectOption}
+          serviceArea={config?.serviceArea ?? null}
+          routes={routes}
+          activeRoute={basket.activePlan}
+          onSelectRoute={basket.selectPlan}
           coveredBy={panelRef}
         />
       </main>
@@ -46,8 +52,15 @@ function App() {
           <StatusBadge status={status} />
         </header>
         <div className="panel__body">
-          <TripPanel planner={planner} chains={chains} />
-          <ProductSearch chains={chains} />
+          <TripPanel planner={trip} />
+          <ShoppingListPanel
+            list={list}
+            chains={chains}
+            priority={basket.priority}
+            onPriorityChange={basket.setPriority}
+          />
+          <PlanResults planner={basket} chains={chains} provider={config?.provider ?? 'straight-line'} />
+          <NearestList planner={trip} chains={chains} />
           {error && <p className="panel-section error">Could not load stores: {error}</p>}
         </div>
       </aside>
