@@ -71,11 +71,41 @@ public final class PlanningDtos {
     }
 
     /**
-     * @param plans               the best plan for each number of stores, best first
+     * One chain's column in the comparison.
+     *
+     * @param nearestStoreName its branch with the shortest travel time; null when no travel
+     *                         times were needed (nothing on the list is sold anywhere)
+     * @param nearestSeconds   one-way travel time to that branch, or null
+     * @param totalCents       the items it sells, bought there
+     * @param itemsCovered     how many items of the list it sells
+     */
+    public record ChainColumnDto(String chainCode, Long nearestStoreId, String nearestStoreName, Long nearestSeconds,
+                                 long totalCents, int itemsCovered) {
+    }
+
+    /** @param cheapest true for the lowest price of this item across chains (ties: all of them) */
+    public record ChainPriceDto(String chainCode, long costCents, long boughtAmount, boolean cheapest,
+                                List<PackDto> packs) {
+    }
+
+    /** @param prices one per chain that sells the item; a chain that does not is missing */
+    public record ComparisonRowDto(long productId, String name, String unit, long neededAmount,
+                                   List<ChainPriceDto> prices) {
+    }
+
+    /** Every item of the list priced at every chain, in list order. */
+    public record ComparisonDto(List<ChainColumnDto> chains, List<ComparisonRowDto> items) {
+    }
+
+    /**
+     * @param plans               the best plan for each number of stores, best first, without
+     *                            plans another one beats on both price and time
      * @param unavailable         items on the list that no chain sells; left out of the plans
      * @param combinationsChecked chain combinations the optimizer compared
+     * @param comparison          the list priced at every chain
      */
     public record OptimizeResponse(String mode, double valueOfTimeEurPerHour, boolean estimated,
-                                   int combinationsChecked, List<UnavailableDto> unavailable, List<PlanDto> plans) {
+                                   int combinationsChecked, List<UnavailableDto> unavailable, List<PlanDto> plans,
+                                   ComparisonDto comparison) {
     }
 }

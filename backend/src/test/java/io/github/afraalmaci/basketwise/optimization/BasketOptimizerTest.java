@@ -146,6 +146,40 @@ class BasketOptimizerTest {
     }
 
     @Test
+    void reportsTheCheapestPacksOfEveryChainForEveryItem() {
+        Result result = BasketOptimizer.optimize(LIST, OFFERS, 3, ScoringPolicy.eurosPerHour(10), TRIPS);
+
+        assertThat(result.cheapestPerChain().get("NEAR").get(MILK).costCents()).isEqualTo(300);
+        assertThat(result.cheapestPerChain().get("NEAR").get(COLA).costCents()).isEqualTo(200);
+        assertThat(result.cheapestPerChain().get("CHEAP").get(MILK).costCents()).isEqualTo(200);
+        assertThat(result.cheapestPerChain().get("CHEAP").containsKey(COLA)).isFalse();
+    }
+
+    @Test
+    void dropsAlternativesBeatenOnBothPriceAndTime() {
+        // The 2-store plan costs more and takes longer than the 1-store plan: nobody picks it.
+        // The 3-store plan is slower but cheaper, so it is a real trade-off and stays.
+        Trip quick = new Trip(List.of(1L), 600, 0);
+        Trip slow = new Trip(List.of(2L, 3L), 1_200, 0);
+        Plan best = new Plan(List.of("A"), List.of(), 500, quick, 0, 500);
+        Plan pricierAndSlower = new Plan(List.of("A", "B"), List.of(), 520, slow, 0, 520);
+        Plan cheaperButSlower = new Plan(List.of("A", "B", "C"), List.of(), 450, slow, 0, 450);
+
+        assertThat(BasketOptimizer.withoutDominated(List.of(best, pricierAndSlower, cheaperButSlower)))
+                .containsExactly(best, cheaperButSlower);
+    }
+
+    @Test
+    void theBestPlanIsNeverDropped() {
+        // At 0 EUR/h equal prices tie, and the tie goes to fewer stores, even though the
+        // 2-store plan is quicker. The best plan stays; the quicker one stays too.
+        Plan oneStore = new Plan(List.of("A"), List.of(), 500, new Trip(List.of(1L), 900, 0), 0, 500);
+        Plan twoStores = new Plan(List.of("A", "B"), List.of(), 500, new Trip(List.of(1L, 2L), 600, 0), 0, 500);
+
+        assertThat(BasketOptimizer.withoutDominated(List.of(oneStore, twoStores))).containsExactly(oneStore, twoStores);
+    }
+
+    @Test
     void rejectsInvalidLists() {
         ScoringPolicy policy = ScoringPolicy.eurosPerHour(10);
         assertThatThrownBy(() -> BasketOptimizer.optimize(List.of(), OFFERS, 3, policy, TRIPS))
