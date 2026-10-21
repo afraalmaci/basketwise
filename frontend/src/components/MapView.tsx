@@ -1,6 +1,6 @@
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
-import { useEffect, useRef, useSyncExternalStore, type RefObject } from 'react'
+import { useEffect, useRef, useSyncExternalStore } from 'react'
 import {
   Circle,
   CircleMarker,
@@ -30,11 +30,11 @@ const originIcon = L.divIcon({
   iconAnchor: [11, 11],
 })
 
-/** A teardrop pin in the chain's color, with the stop number (or a dot) inside. */
-function pinIcon(color: string, label: string | null): L.DivIcon {
+/** A teardrop pin in the chain's color, with the stop number inside. */
+function pinIcon(color: string, label: string): L.DivIcon {
   return L.divIcon({
     className: 'store-pin',
-    html: `<div class="store-pin__body" style="background:${color}"><span>${label ?? ''}</span></div>`,
+    html: `<div class="store-pin__body" style="background:${color}"><span>${label}</span></div>`,
     iconSize: [28, 38],
     iconAnchor: [14, 34],
     tooltipAnchor: [0, -30],
@@ -53,6 +53,7 @@ type Props = {
   chains: Chain[]
   stores: Store[]
   origin?: Origin | null
+  /** Makes the blue dot draggable. */
   onOriginChange?: (position: LatLng) => void
   /** "Your location" button; only shown when the device location is known. */
   onLocate?: () => void
@@ -62,8 +63,9 @@ type Props = {
   routes?: MapRoute[]
   activeRoute?: number
   onSelectRoute?: (index: number) => void
-  /** The floating panel. Centering accounts for it, so the target is not hidden behind it. */
-  coveredBy?: RefObject<HTMLElement | null>
+  /** Initial zoom; the map zooms to the routes when there are any. */
+  zoom?: number
+  className?: string
 }
 
 export function MapView({
@@ -77,23 +79,20 @@ export function MapView({
   routes = [],
   activeRoute = 0,
   onSelectRoute,
-  coveredBy,
+  zoom = 13,
+  className = 'map',
 }: Props) {
   const dark = usePrefersDark()
   const tiles = tileSource(dark)
   const colorByChain = new Map(chains.map((chain) => [chain.code, chain.color]))
   const active = routes[activeRoute] ?? routes[0] ?? null
   const stopNumber = new Map(active?.stops.map((stop, index) => [stop.storeId, index + 1]) ?? [])
+  const center: [number, number] = origin ? [origin.position.latitude, origin.position.longitude] : DEN_HAAG
 
   return (
-    <div className={tiles.cssDarken ? 'map-wrapper map-wrapper--darken-tiles' : 'map-wrapper'}>
-      <MapContainer center={DEN_HAAG} zoom={13} className="map" scrollWheelZoom zoomControl={false}>
-        <TileLayer
-          key={tiles.url}
-          attribution={tiles.attribution}
-          url={tiles.url}
-          subdomains={tiles.subdomains}
-        />
+    <div className={tiles.cssDarken ? `${className} map-wrapper--darken-tiles` : className}>
+      <MapContainer center={center} zoom={zoom} className="map__leaflet" scrollWheelZoom zoomControl={false}>
+        <TileLayer key={tiles.url} attribution={tiles.attribution} url={tiles.url} subdomains={tiles.subdomains} />
         <ZoomControl position="bottomright" />
 
         {serviceArea && (
@@ -123,9 +122,7 @@ export function MapView({
         {stores.map((store) => {
           const color = colorByChain.get(store.chainCode) ?? '#666'
           const number = stopNumber.get(store.id)
-
-          // Stops of the shown route become numbered pins; the rest stay small dots, like
-          // points of interest.
+          // Stops of the shown route become numbered pins; the rest stay small dots.
           if (number !== undefined) {
             return (
               <Marker
@@ -142,7 +139,7 @@ export function MapView({
             <CircleMarker
               key={store.id}
               center={[store.latitude, store.longitude]}
-              radius={7}
+              radius={6}
               pathOptions={{ className: 'store-dot', weight: 2, fillColor: color, fillOpacity: 1 }}
             >
               <Tooltip direction="top">{store.name}</Tooltip>
@@ -164,7 +161,7 @@ export function MapView({
             position={[origin.position.latitude, origin.position.longitude]}
             icon={originIcon}
             draggable={Boolean(onOriginChange)}
-            title="Your location (drag to move)"
+            title={onOriginChange ? 'Your start point (drag to move)' : 'Your start point'}
             zIndexOffset={1000}
             eventHandlers={{
               dragend: (event) => {
@@ -175,22 +172,10 @@ export function MapView({
           />
         )}
 
-        {origin && <Recenter origin={origin} coveredBy={coveredBy} />}
-        <FitRoutes routes={routes} coveredBy={coveredBy} />
-        {origin && canLocate && onLocate && <LocateButton origin={origin} onLocate={onLocate} coveredBy={coveredBy} />}
+        {origin && routes.length === 0 && <Recenter origin={origin} />}
+        <FitRoutes routes={routes} />
+        {origin && canLocate && onLocate && <LocateButton origin={origin} onLocate={onLocate} />}
       </MapContainer>
-
-      {chains.length > 0 && (
-        <ul className="chips" aria-label="Supermarket chains">
-          {chains.map((chain) => (
-            <li key={chain.code} className="chip">
-              <span className="dot" style={{ background: chain.color }} aria-hidden />
-              {chain.name}
-              <span className="chip__count">{chain.storeCount}</span>
-            </li>
-          ))}
-        </ul>
-      )}
     </div>
   )
 }
@@ -216,16 +201,8 @@ function RouteLine({ route, active, onClick }: RouteLineProps) {
   }
   return (
     <>
-      <Polyline
-        positions={route.geometry}
-        pathOptions={{ className: `${tone}-casing`, weight: 9, lineJoin: 'round' }}
-        eventHandlers={events}
-      />
-      <Polyline
-        positions={route.geometry}
-        pathOptions={{ className: `${tone}-line`, weight: 6, lineJoin: 'round' }}
-        eventHandlers={events}
-      />
+      <Polyline positions={route.geometry} pathOptions={{ className: `${tone}-casing`, weight: 9, lineJoin: 'round' }} eventHandlers={events} />
+      <Polyline positions={route.geometry} pathOptions={{ className: `${tone}-line`, weight: 6, lineJoin: 'round' }} eventHandlers={events} />
     </>
   )
 }
@@ -234,7 +211,7 @@ function RouteLine({ route, active, onClick }: RouteLineProps) {
  * Pans to the origin when it comes from a new source (default → device location), but not
  * while the user drags the pin around: that would fight with their own panning.
  */
-function Recenter({ origin, coveredBy }: { origin: Origin; coveredBy?: RefObject<HTMLElement | null> }) {
+function Recenter({ origin }: { origin: Origin }) {
   const map = useMap()
   const lastSource = useRef<OriginSource | null>(null)
   const { latitude, longitude } = origin.position
@@ -244,17 +221,17 @@ function Recenter({ origin, coveredBy }: { origin: Origin; coveredBy?: RefObject
     const changed = source !== lastSource.current
     lastSource.current = source
     if (!changed || source === 'manual') return
-    focusOn(map, [latitude, longitude], Math.max(map.getZoom(), 14), coveredBy?.current)
-  }, [map, source, latitude, longitude, coveredBy])
+    map.setView([latitude, longitude], Math.max(map.getZoom(), 13), { animate: false })
+  }, [map, source, latitude, longitude])
 
   return null
 }
 
 /**
- * When new routes arrive, zooms the map so every route is visible, keeping clear of the
- * panel. Selecting another plan does not move the map: the routes stay the same.
+ * When new routes arrive, zooms the map so every route is visible. Selecting another plan
+ * does not move the map: the routes stay the same.
  */
-function FitRoutes({ routes, coveredBy }: { routes: MapRoute[]; coveredBy?: RefObject<HTMLElement | null> }) {
+function FitRoutes({ routes }: { routes: MapRoute[] }) {
   const map = useMap()
   // A string of all coordinates: changes only when the routes themselves change.
   const signature = routes.map((route) => route.geometry.map((point) => point.join(',')).join(';')).join('|')
@@ -262,31 +239,16 @@ function FitRoutes({ routes, coveredBy }: { routes: MapRoute[]; coveredBy?: RefO
   useEffect(() => {
     if (!signature) return
     const points = signature.split(/[|;]/).map((pair) => pair.split(',').map(Number) as [number, number])
-    const mapBox = map.getContainer().getBoundingClientRect()
-    const cover = coveredBy?.current?.getBoundingClientRect()
-    const margin = 48
-    let paddingTopLeft: [number, number] = [margin, margin]
-    let paddingBottomRight: [number, number] = [margin, margin]
-    if (cover) {
-      const isBottomSheet = cover.width >= mapBox.width - 24
-      if (isBottomSheet) {
-        paddingBottomRight = [margin, mapBox.bottom - cover.top + margin]
-      } else {
-        paddingTopLeft = [cover.right - mapBox.left + margin, margin]
-      }
-    }
     // No animation: Leaflet ignores a new zoom while a zoom animation is still running, so a
-    // quick second selection would leave the map at the first trip's zoom.
-    map.fitBounds(L.latLngBounds(points), { paddingTopLeft, paddingBottomRight, maxZoom: 16, animate: false })
-  }, [map, signature, coveredBy])
+    // quick second change would leave the map at the first route's zoom.
+    map.fitBounds(L.latLngBounds(points), { padding: [40, 40], maxZoom: 16, animate: false })
+  }, [map, signature])
 
   return null
 }
 
-/** Map button that returns to the device location (and re-centers if already there). */
-type LocateButtonProps = { origin: Origin; onLocate: () => void; coveredBy?: RefObject<HTMLElement | null> }
-
-function LocateButton({ origin, onLocate, coveredBy }: LocateButtonProps) {
+/** Map button that returns to the device location. */
+function LocateButton({ origin, onLocate }: { origin: Origin; onLocate: () => void }) {
   const map = useMap()
   const ref = useRef<HTMLDivElement>(null)
 
@@ -299,13 +261,12 @@ function LocateButton({ origin, onLocate, coveredBy }: LocateButtonProps) {
     <div ref={ref} className="map-control map-control--locate">
       <button
         type="button"
-        aria-label="Show your location"
-        title="Show your location"
+        aria-label="Use my location"
+        title="Use my location"
         onClick={() => {
           onLocate()
           if (origin.source !== 'manual') {
-            const target: [number, number] = [origin.position.latitude, origin.position.longitude]
-            focusOn(map, target, Math.max(map.getZoom(), 15), coveredBy?.current)
+            map.setView([origin.position.latitude, origin.position.longitude], Math.max(map.getZoom(), 15), { animate: false })
           }
         }}
       >
@@ -313,23 +274,6 @@ function LocateButton({ origin, onLocate, coveredBy }: LocateButtonProps) {
       </button>
     </div>
   )
-}
-
-/**
- * Centers the map on a point within the part of the map the panel leaves visible: right of
- * the side panel on desktop, above the bottom sheet on phones.
- */
-function focusOn(map: L.Map, target: [number, number], zoom: number, cover: HTMLElement | null | undefined) {
-  map.setView(target, zoom, { animate: false })
-  if (!cover) return
-  const mapBox = map.getContainer().getBoundingClientRect()
-  const coverBox = cover.getBoundingClientRect()
-  const isBottomSheet = coverBox.width >= mapBox.width - 24
-  if (isBottomSheet) {
-    map.panBy([0, (mapBox.bottom - coverBox.top) / 2], { animate: false })
-  } else {
-    map.panBy([-(coverBox.right - mapBox.left) / 2, 0], { animate: false })
-  }
 }
 
 const darkQuery = '(prefers-color-scheme: dark)'

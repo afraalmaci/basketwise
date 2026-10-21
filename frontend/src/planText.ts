@@ -1,5 +1,6 @@
-import type { Plan } from './api/planning'
-import { formatDuration, formatPrice } from './format'
+import type { Unit } from './api/catalog'
+import type { BoughtPack, Plan } from './api/planning'
+import { formatDuration, formatPrice, formatQuantity } from './format'
 
 // The sentences that explain a plan. Kept apart from the components so they can be tested
 // on their own.
@@ -39,4 +40,15 @@ export function verdict(plans: Plan[], eurosPerHour: number): string {
     return `Going to more stores would not save anything.`
   }
   return best.storeCount === 1 ? 'One store has everything at the best price.' : `${stores(best.storeCount)} is the only option.`
+}
+
+/** "2 × 1 L" or "1 × 1,5 L + 1 × 1 L", with the chain's own pack labels. */
+export function packsText(packs: BoughtPack[]): string {
+  return packs.map((pack) => `${pack.count} × ${pack.quantityText}`).join(' + ')
+}
+
+/** "+500 g" when the packs add up to more than needed, else null. */
+export function extraText(boughtAmount: number, neededAmount: number, unit: Unit): string | null {
+  const extra = boughtAmount - neededAmount
+  return extra > 0 ? `+${formatQuantity(extra, unit)}` : null
 }

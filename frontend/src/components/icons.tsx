@@ -105,3 +105,31 @@ export function CheckIcon(props: IconProps) {
     </Svg>
   )
 }
+
+export function PinIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z" />
+      <circle cx="12" cy="9.5" r="2.5" />
+    </Svg>
+  )
+}
+
+export function BalanceIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M12 4v16M8 20h8M5 8h14" />
+      <path d="M5 8l-3 7h6zM19 8l-3 7h6z" />
+    </Svg>
+  )
+}
+
+/** The BasketWise mark: a shelf price tag with a route-red dot, used next to the name. */
+export function LogoMark({ size = 26 }: IconProps) {
+  return (
+    <svg className="logo__mark" width={size} height={size} viewBox="0 0 26 26" aria-hidden>
+      <path d="M2.5 13 9.2 5.2c.4-.4.9-.7 1.5-.7H22a1.5 1.5 0 0 1 1.5 1.5v14a1.5 1.5 0 0 1-1.5 1.5H10.7c-.6 0-1.1-.3-1.5-.7Z" fill="currentColor" />
+      <circle cx="10.5" cy="13" r="2.3" fill="var(--fietspad)" />
+    </svg>
+  )
+}

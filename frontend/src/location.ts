@@ -65,3 +65,15 @@ export function clampToServiceArea(point: LatLng, area: ServiceArea): LatLng {
     longitude: round5(Math.min(Math.max(point.longitude, area.minLongitude), area.maxLongitude)),
   }
 }
+
+/** What the start point chip says. */
+export function originLabel(origin: Origin, areaName: string): string {
+  switch (origin.source) {
+    case 'device':
+      return 'My location'
+    case 'manual':
+      return 'Pinned start point'
+    case 'default':
+      return `${areaName} (sample)`
+  }
+}

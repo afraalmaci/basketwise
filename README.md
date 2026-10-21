@@ -5,6 +5,10 @@
 BasketWise splits a grocery list across supermarkets and plans the route between them,
 so you can see whether visiting a second store is actually worth the extra time.
 
+Add products with how much you need. The **Compare** tab prices the whole list at every
+chain, item by item, with the cheapest price highlighted. The **Plan** tab shows the best
+plan for one, two or three stores and the route, with what to buy at each stop.
+
 > **Demo data only.** All stores, products and prices in this project are synthetic.
 > Store names are fictional and do not represent real supermarket chains.
 
@@ -91,7 +95,7 @@ cd frontend && npm test
 | `GET /api/products/search?q=melk` | Fuzzy product search; every hit includes each chain's offers with normalized unit prices |
 | `GET /api/routing/config` | Demo service area, default location, travel modes, max stops |
 | `GET /api/routing/nearest?lat=52.08&lon=4.32&mode=bike` | Nearest store of each chain by travel time |
-| `POST /api/optimize` | Where to buy a shopping list: `{"origin": {"latitude": 52.08, "longitude": 4.32}, "mode": "bike", "valueOfTimeEurPerHour": 10, "items": [{"productId": 1, "quantity": 2000}]}`. Quantities are in ml, g or pieces. Returns the best plan for each number of stores, best first, with packs per store and the route. |
+| `POST /api/optimize` | Where to buy a shopping list: `{"origin": {"latitude": 52.08, "longitude": 4.32}, "mode": "bike", "valueOfTimeEurPerHour": 10, "items": [{"productId": 1, "quantity": 2000}]}`. Quantities are in ml, g or pieces. Returns the list priced at every chain (`comparison`) and the best plan for each number of stores, best first, with packs per store and the route. |
 | `POST /api/routing/trip` | Round trips through 1 to 3 stores, fastest first plus up to two alternatives (other visiting orders or nearby branches of the same chains): `{"origin": {"latitude": 52.08, "longitude": 4.32}, "storeIds": [3, 12], "mode": "walk"}` |
 | `GET /api/system/info` | Data mode and database status |
 

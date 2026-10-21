@@ -43,7 +43,7 @@ export function ProductSearch({ chains, onAdd, isOnList = () => false }: Props) 
         <p className="muted search__status">No products found for "{query.trim()}".</p>
       )}
       {search.state === 'done' && search.results.length > 0 && (
-        <ul className="results">
+        <ul className="results-list">
           {search.results.map((product) => (
             <ProductResult
               key={product.id}
