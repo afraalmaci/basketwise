@@ -43,7 +43,9 @@ class PlanningApiIntegrationTest {
                 "\"combinationsChecked\":14", "\"unavailable\":[]",
                 "\"plans\":[{\"storeCount\":", "\"basketCents\":", "\"scoreCents\":",
                 "\"name\":\"Halfvolle melk\"", "\"neededAmount\":2000", "\"quantityText\":",
-                "\"geometry\":[[52.0809,4.3245]");
+                "\"geometry\":[[52.0809,4.3245]",
+                "\"comparison\":{\"chains\":[{\"chainCode\":\"BUDGETBAAS\"", "\"nearestSeconds\":",
+                "\"itemsCovered\":", "\"cheapest\":true");
     }
 
     @Test

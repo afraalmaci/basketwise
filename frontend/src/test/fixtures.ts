@@ -1,7 +1,7 @@
 import { vi } from 'vitest'
 import type { Chain, Product, Store } from '../api/catalog'
 import type { OptimizeResponse } from '../api/planning'
-import type { NearestStores, RoutingConfig } from '../api/routing'
+import type { RoutingConfig } from '../api/routing'
 
 export const chains: Chain[] = [
   { code: 'BUDGETBAAS', name: 'Budgetbaas', color: '#d97706', storeCount: 1 },
@@ -37,15 +37,6 @@ export const routingConfig: RoutingConfig = {
   },
   modes: ['bike', 'walk'],
   maxStops: 3,
-}
-
-export const nearestStores: NearestStores = {
-  mode: 'bike',
-  estimated: true,
-  stores: [
-    { storeId: 2, chainCode: 'HOEKWINKEL', storeName: 'Hoekwinkel Centrum', latitude: 52.07, longitude: 4.31, durationSeconds: 300, distanceMeters: 1240 },
-    { storeId: 1, chainCode: 'BUDGETBAAS', storeName: 'Budgetbaas Moerwijk', latitude: 52.05, longitude: 4.29, durationSeconds: 900, distanceMeters: 3760 },
-  ],
 }
 
 /**
@@ -149,6 +140,52 @@ export const optimizeResponse: OptimizeResponse = {
       ],
     },
   ],
+  comparison: {
+    chains: [
+      { chainCode: 'BUDGETBAAS', nearestStoreId: 1, nearestStoreName: 'Budgetbaas Moerwijk', nearestSeconds: 900, totalCents: 129, itemsCovered: 1 },
+      { chainCode: 'HOEKWINKEL', nearestStoreId: 2, nearestStoreName: 'Hoekwinkel Centrum', nearestSeconds: 300, totalCents: 498, itemsCovered: 2 },
+    ],
+    // In product id order, as the backend answers; the UI follows the list order instead.
+    items: [
+      {
+        productId: 1,
+        name: 'Halfvolle melk',
+        unit: 'ml',
+        neededAmount: 1000,
+        prices: [
+          {
+            chainCode: 'BUDGETBAAS',
+            costCents: 129,
+            boughtAmount: 1500,
+            cheapest: true,
+            packs: [{ displayName: 'BB Halfvolle melk', quantityText: '1,5 L', amount: 1500, priceCents: 129, count: 1 }],
+          },
+          {
+            chainCode: 'HOEKWINKEL',
+            costCents: 149,
+            boughtAmount: 1000,
+            cheapest: false,
+            packs: [{ displayName: 'Halfvolle Melk', quantityText: '1000 ml', amount: 1000, priceCents: 149, count: 1 }],
+          },
+        ],
+      },
+      {
+        productId: 2,
+        name: 'Scharreleieren',
+        unit: 'pc',
+        neededAmount: 10,
+        prices: [
+          {
+            chainCode: 'HOEKWINKEL',
+            costCents: 349,
+            boughtAmount: 10,
+            cheapest: true,
+            packs: [{ displayName: 'Scharreleieren', quantityText: '10 stuks', amount: 10, priceCents: 349, count: 1 }],
+          },
+        ],
+      },
+    ],
+  },
 }
 
 export const eggs: Product = {
@@ -182,7 +219,6 @@ export const healthyApi: Routes = {
   '/api/stores': { ok: true, body: stores },
   '/api/products/search': { ok: true, body: [milk] },
   '/api/routing/config': { ok: true, body: routingConfig },
-  '/api/routing/nearest': { ok: true, body: nearestStores },
   '/api/optimize': { ok: true, body: optimizeResponse },
 }
 

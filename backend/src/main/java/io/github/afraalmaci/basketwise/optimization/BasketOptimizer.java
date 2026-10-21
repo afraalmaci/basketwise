@@ -30,7 +30,8 @@ import java.util.TreeSet;
  *
  * <p>Each plan is scored with a {@link ScoringPolicy} (price + time × value of time). The
  * result holds the best plan for every number of stores, best overall first, so the UI can
- * show "1 store: €42,00 · 10 min" next to "2 stores: €39,60 · 19 min".
+ * show "1 store: €42,00 · 10 min" next to "2 stores: €39,60 · 19 min". Alternatives that
+ * another plan beats on both price and time are left out.
  *
  * <p>A subset where some chain would sell nothing is skipped: visiting a store to buy
  * nothing is never useful, and the smaller subset without that chain is evaluated anyway.
@@ -93,15 +94,23 @@ public final class BasketOptimizer {
     }
 
     /**
-     * @param plans                 best plan per number of stores, best overall first
+     * @param plans                 best plan per number of stores, best overall first, without
+     *                              plans that another plan beats on both price and time
      * @param unavailableProductIds items no chain sells; the plans leave them out
      * @param combinationsChecked   chain subsets considered
+     * @param cheapestPerChain      layer 1 on its own: per chain, per product it sells, the
+     *                              cheapest packs for the needed amount. Lets the UI compare
+     *                              chains item by item.
      */
-    public record Result(List<Plan> plans, List<Long> unavailableProductIds, int combinationsChecked) {
+    public record Result(List<Plan> plans, List<Long> unavailableProductIds, int combinationsChecked,
+                         Map<String, Map<Long, Selection>> cheapestPerChain) {
 
         public Result {
             plans = List.copyOf(plans);
             unavailableProductIds = List.copyOf(unavailableProductIds);
+            Map<String, Map<Long, Selection>> copy = new TreeMap<>();
+            cheapestPerChain.forEach((chain, byProduct) -> copy.put(chain, Map.copyOf(byProduct)));
+            cheapestPerChain = java.util.Collections.unmodifiableMap(copy);
         }
 
         public Optional<Plan> best() {
@@ -142,7 +151,7 @@ public final class BasketOptimizer {
             }
         }
         if (available.isEmpty()) {
-            return new Result(List.of(), unavailable, 0);
+            return new Result(List.of(), unavailable, 0, cheapest);
         }
 
         List<String> chains = new ArrayList<>(cheapest.keySet());
@@ -172,7 +181,39 @@ public final class BasketOptimizer {
 
         List<Plan> plans = new ArrayList<>(bestPerSize.values());
         plans.sort(bestFirst);
-        return new Result(plans, unavailable, checked);
+        plans = withoutDominated(plans);
+        return new Result(plans, unavailable, checked, cheapest);
+    }
+
+    /**
+     * Drops alternatives that another plan beats on both price and time (and is at least as
+     * good on the other): nobody would pick them. The best plan always stays, whatever the
+     * value of time. Example: a 3-store plan that costs more and takes longer than the
+     * 2-store plan is the best 3-store plan, but not worth showing.
+     */
+    static List<Plan> withoutDominated(List<Plan> sorted) {
+        List<Plan> kept = new ArrayList<>();
+        for (int i = 0; i < sorted.size(); i++) {
+            Plan candidate = sorted.get(i);
+            boolean dominated = false;
+            for (Plan other : sorted) {
+                if (i > 0 && other != candidate && dominates(other, candidate)) {
+                    dominated = true;
+                    break;
+                }
+            }
+            if (!dominated) {
+                kept.add(candidate);
+            }
+        }
+        return kept;
+    }
+
+    private static boolean dominates(Plan a, Plan b) {
+        long aSeconds = a.trip().durationSeconds();
+        long bSeconds = b.trip().durationSeconds();
+        return a.basketCents() <= b.basketCents() && aSeconds <= bSeconds
+                && (a.basketCents() < b.basketCents() || aSeconds < bSeconds);
     }
 
     /** Best plan using exactly these chains, or empty if they cannot cover the list or be reached. */

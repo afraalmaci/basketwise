@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -15,13 +15,13 @@ describe('App', () => {
     vi.unstubAllGlobals()
   })
 
-  it('shows the demo badge and passes stores to the map', async () => {
-    mockApi(healthyApi)
+  it('shows the demo badge and loads the stores for the map', async () => {
+    const fetchMock = mockApi(healthyApi)
 
     render(<App />)
 
     expect(await screen.findByText('Demo data')).toBeInTheDocument()
-    expect(await screen.findByText('2 stores')).toBeInTheDocument()
+    await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => url.toString() === '/api/stores')).toBe(true))
   })
 
   it('shows an error badge when the API fails', async () => {

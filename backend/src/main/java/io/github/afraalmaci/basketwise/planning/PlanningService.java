@@ -10,8 +10,10 @@ import io.github.afraalmaci.basketwise.optimization.BasketOptimizer.Result;
 import io.github.afraalmaci.basketwise.optimization.BasketOptimizer.Trip;
 import io.github.afraalmaci.basketwise.optimization.Offer;
 import io.github.afraalmaci.basketwise.optimization.Pack;
+import io.github.afraalmaci.basketwise.optimization.PackSelector.Selection;
 import io.github.afraalmaci.basketwise.optimization.ScoringPolicy;
 import io.github.afraalmaci.basketwise.routing.GeoPoint;
+import io.github.afraalmaci.basketwise.routing.Leg;
 import io.github.afraalmaci.basketwise.routing.Route;
 import io.github.afraalmaci.basketwise.routing.RoutingClient;
 import io.github.afraalmaci.basketwise.routing.RoutingExceptions.OutsideServiceAreaException;
@@ -31,6 +33,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -43,7 +46,7 @@ import java.util.function.Supplier;
  *
  * <p>Travel time costs one matrix request per optimization, however many chain combinations
  * the optimizer tries: the origin plus the {@value #BRANCHES_PER_CHAIN} nearest branches of
- * every chain that sells something on the list (13 points for 4 chains). Each combination is
+ * every chain (13 points for 4 chains). Each combination is
  * then answered from that matrix by {@link TourPlanner}. Only the plans shown to the user get
  * a full route with geometry.
  */
@@ -87,12 +90,34 @@ public class PlanningService {
     }
 
     /**
+     * One chain's column in the comparison.
+     *
+     * @param nearestStore   its branch with the shortest travel time from the origin, or null
+     *                       when no travel times were needed (nothing on the list is sold)
+     * @param nearestSeconds one-way travel time to that branch, or null like nearestStore
+     * @param totalCents     the whole list bought at this chain, for the items it sells
+     * @param itemsCovered   how many items of the list it sells
+     */
+    public record ChainSummary(String chainCode, StoreLocation nearestStore, Long nearestSeconds,
+                               long totalCents, int itemsCovered) {
+    }
+
+    /**
+     * Every item priced at every chain: the optimizer's first layer, made visible.
+     *
+     * @param chains   one per chain that has stores, by chain code
+     * @param cheapest per chain, per product it sells: the cheapest packs for the needed amount
+     */
+    public record Comparison(List<ChainSummary> chains, Map<String, Map<Long, Selection>> cheapest) {
+    }
+
+    /**
      * @param plans        best plan per number of stores, best first
      * @param products     every product on the list, by id, with its offers
      * @param unavailable  products on the list that no chain sells
      */
     public record Outcome(List<RoutedPlan> plans, Map<Long, ProductDto> products, List<ProductDto> unavailable,
-                          int combinationsChecked, boolean estimated) {
+                          int combinationsChecked, boolean estimated, Comparison comparison) {
     }
 
     public Outcome plan(Request request) {
@@ -112,22 +137,26 @@ public class PlanningService {
             }
         }
 
-        // One matrix: index 0 is the origin, then the candidate branches of every selling chain.
+        // One matrix: index 0 is the origin, then the candidate branches of every chain. Chains
+        // that sell nothing on the list are included too, so the comparison can say how far
+        // away they are; with 4 chains that is at most 13 points.
         List<StoreLocation> all = stores.get();
+        Set<String> allChains = new TreeSet<>();
+        all.forEach(store -> allChains.add(store.chainCode()));
         List<GeoPoint> points = new ArrayList<>();
         List<StoreLocation> storeAt = new ArrayList<>();
         points.add(request.origin());
         storeAt.add(null);
         Map<String, List<Integer>> candidates = new TreeMap<>();
-        for (String chain : sellingChains) {
+        for (String chain : allChains) {
             for (StoreLocation store : nearestBranches(chain, all, request.origin())) {
                 candidates.computeIfAbsent(chain, code -> new ArrayList<>()).add(points.size());
                 points.add(store.location());
                 storeAt.add(store);
             }
         }
-        // No candidates means nothing on the list is sold anywhere: no travel to ask about.
-        TravelMatrix matrix = candidates.isEmpty() ? null : routingClient.matrix(points, points, request.mode());
+        // Nothing on the list is sold anywhere: no travel to ask about.
+        TravelMatrix matrix = sellingChains.isEmpty() ? null : routingClient.matrix(points, points, request.mode());
 
         Result result = BasketOptimizer.optimize(items, offers, request.maxStores(), request.scoring(),
                 chains -> fastestTrip(matrix, candidates, storeAt, chains));
@@ -138,7 +167,31 @@ public class PlanningService {
         }
         List<ProductDto> unavailable = result.unavailableProductIds().stream().map(byId::get).toList();
         boolean estimated = (matrix != null && matrix.estimated()) || plans.stream().anyMatch(RoutedPlan::estimated);
-        return new Outcome(plans, byId, unavailable, result.combinationsChecked(), estimated);
+        Comparison comparison = compare(allChains, candidates, storeAt, matrix, result.cheapestPerChain());
+        return new Outcome(plans, byId, unavailable, result.combinationsChecked(), estimated, comparison);
+    }
+
+    private static Comparison compare(Set<String> chains, Map<String, List<Integer>> candidates,
+                                      List<StoreLocation> storeAt, TravelMatrix matrix,
+                                      Map<String, Map<Long, Selection>> cheapest) {
+        List<ChainSummary> summaries = new ArrayList<>();
+        for (String chain : chains) {
+            StoreLocation nearest = null;
+            Long nearestSeconds = null;
+            if (matrix != null) {
+                for (int index : candidates.getOrDefault(chain, List.of())) {
+                    Leg leg = matrix.leg(0, index);
+                    if (leg != null && (nearestSeconds == null || leg.durationSeconds() < nearestSeconds)) {
+                        nearest = storeAt.get(index);
+                        nearestSeconds = leg.durationSeconds();
+                    }
+                }
+            }
+            Map<Long, Selection> sold = cheapest.getOrDefault(chain, Map.of());
+            long total = sold.values().stream().mapToLong(Selection::costCents).sum();
+            summaries.add(new ChainSummary(chain, nearest, nearestSeconds, total, sold.size()));
+        }
+        return new Comparison(summaries, cheapest);
     }
 
     /** The fastest loop through one branch of each chain, answered from the precomputed matrix. */

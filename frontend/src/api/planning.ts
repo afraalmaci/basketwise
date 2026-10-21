@@ -65,6 +65,43 @@ export type Plan = {
   geometry: [number, number][]
 }
 
+/** One chain's column in the comparison. */
+export type ChainColumn = {
+  chainCode: string
+  /** Its branch with the shortest travel time; null when nothing on the list is sold anywhere. */
+  nearestStoreId: number | null
+  nearestStoreName: string | null
+  /** One way, from the start location. */
+  nearestSeconds: number | null
+  /** The items it sells, bought there. */
+  totalCents: number
+  itemsCovered: number
+}
+
+export type ChainPrice = {
+  chainCode: string
+  costCents: number
+  boughtAmount: number
+  /** Lowest price for this item across chains (ties: all of them). */
+  cheapest: boolean
+  packs: BoughtPack[]
+}
+
+export type ComparisonRow = {
+  productId: number
+  name: string
+  unit: Unit
+  neededAmount: number
+  /** One per chain that sells it; a chain that does not is missing. */
+  prices: ChainPrice[]
+}
+
+/** Every item on the list priced at every chain, in list order. */
+export type Comparison = {
+  chains: ChainColumn[]
+  items: ComparisonRow[]
+}
+
 export type OptimizeResponse = {
   mode: TravelMode
   valueOfTimeEurPerHour: number
@@ -72,8 +109,9 @@ export type OptimizeResponse = {
   combinationsChecked: number
   /** Items no chain sells; the plans leave them out. */
   unavailable: { productId: number; name: string }[]
-  /** The best plan for each number of stores, best first. */
+  /** The best plan for each number of stores, best first, without plans beaten on both price and time. */
   plans: Plan[]
+  comparison: Comparison
 }
 
 export const optimizeBasket = (request: OptimizeRequest, signal?: AbortSignal) =>

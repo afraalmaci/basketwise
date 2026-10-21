@@ -91,6 +91,24 @@ class PlanningServiceTest {
     }
 
     @Test
+    void comparesEveryChainItemByItem() {
+        Outcome outcome = service.plan(request(10, new ListItem(10, 2000), new ListItem(11, 1500)));
+
+        PlanningService.Comparison comparison = outcome.comparison();
+        assertThat(comparison.chains()).extracting(PlanningService.ChainSummary::chainCode).containsExactly("CHEAP", "NEAR");
+        PlanningService.ChainSummary cheap = comparison.chains().get(0);
+        assertThat(cheap.totalCents()).isEqualTo(160); // milk only
+        assertThat(cheap.itemsCovered()).isEqualTo(1);
+        assertThat(cheap.nearestStore()).isEqualTo(CHEAP_STORE);
+        assertThat(cheap.nearestSeconds()).isGreaterThan(0L);
+        PlanningService.ChainSummary near = comparison.chains().get(1);
+        assertThat(near.totalCents()).isEqualTo(300 + 200);
+        assertThat(near.itemsCovered()).isEqualTo(2);
+        assertThat(near.nearestSeconds()).isLessThan(cheap.nearestSeconds());
+        assertThat(comparison.cheapest().get("CHEAP").get(10L).costCents()).isEqualTo(160);
+    }
+
+    @Test
     void reportsItemsNobodySells() {
         Outcome outcome = service.plan(request(10, new ListItem(10, 1000), new ListItem(12, 5)));
 
@@ -104,6 +122,8 @@ class PlanningServiceTest {
 
         assertThat(outcome.plans()).isEmpty();
         assertThat(routing.matrixCalls).isEqualTo(0);
+        assertThat(outcome.comparison().chains()).hasSize(2);
+        assertThat(outcome.comparison().chains().get(0).nearestSeconds()).isNull();
     }
 
     @Test

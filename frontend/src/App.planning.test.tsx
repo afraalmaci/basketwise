@@ -32,7 +32,14 @@ function optimizeBodies(fetchMock: ReturnType<typeof mockApi>) {
     .map(([, init]) => JSON.parse(String(init?.body)))
 }
 
-describe('App shopping plans', () => {
+/** Text of every cell, row by row. */
+function tableText(table: HTMLElement): string[][] {
+  return within(table)
+    .getAllByRole('row')
+    .map((row) => Array.from(row.querySelectorAll('th, td')).map((cell) => normalize(cell.textContent)))
+}
+
+describe('App shopping list and results', () => {
   let restoreGeolocation: () => void
 
   beforeEach(() => {
@@ -44,12 +51,12 @@ describe('App shopping plans', () => {
     restoreGeolocation()
   })
 
-  it('asks nothing while the list is empty', async () => {
+  it('explains what to do and asks nothing while the list is empty', async () => {
     const fetchMock = mockApi(healthyApi)
     render(<App />)
 
-    expect(await screen.findByText(/Search for products and add them/)).toBeInTheDocument()
-    await screen.findByText('Hoekwinkel Centrum') // nearest stores loaded, so the app has settled
+    expect(await screen.findByRole('heading', { name: 'Where should you shop?' })).toBeInTheDocument()
+    await screen.findByRole('button', { name: /Start point/ }) // routing config loaded, so the app has settled
     expect(optimizeBodies(fetchMock)).toEqual([])
   })
 
@@ -96,10 +103,40 @@ describe('App shopping plans', () => {
     await waitFor(() => expect(optimizeBodies(fetchMock).at(-1)?.items).toEqual([{ productId: 1, quantity: 2000 }]))
   })
 
-  it('shows the recommended plan, the alternative and what to buy where', async () => {
+  it('compares the list at every chain, in list order, with the cheapest price marked', async () => {
+    storeList([EGGS, MILK])
+    mockApi(healthyApi)
+    render(<App />)
+
+    const table = await screen.findByRole('table', { name: 'Prices per chain' })
+    expect(tableText(table)).toEqual([
+      ['Item', 'Budgetbaasnearest 15 min', 'Hoekwinkelnearest 5 min'],
+      ['Scharreleieren10 st', '–not sold', '€ 3,491 × 10 stuks'],
+      ['Halfvolle melk1 L', '€ 1,291 × 1,5 L · +500 ml', '€ 1,491 × 1000 ml'],
+      ['All at one chain', '€ 1,291 of 2 items', '€ 4,98all 2 items'],
+    ])
+    const cheapestMilk = within(table).getByText('1 × 1,5 L · +500 ml').closest('td')
+    expect(cheapestMilk).toHaveClass('compare__cell--best')
+    expect(within(table).getByText('1 × 1000 ml').closest('td')).not.toHaveClass('compare__cell--best')
+  })
+
+  it('sums up the best plan above the table and opens it', async () => {
     storeList([MILK, EGGS])
     mockApi(healthyApi)
     render(<App />)
+
+    expect(normalize((await screen.findByText(/^2 stores ·/)).textContent)).toBe('2 stores · € 4,98 · 25 min')
+    await userEvent.click(screen.getByRole('button', { name: 'See the plan' }))
+
+    expect(screen.getByRole('tab', { name: 'Plan' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('radiogroup', { name: 'Shopping plans' })).toBeInTheDocument()
+  })
+
+  it('shows the plans, the route and what to buy where', async () => {
+    storeList([MILK, EGGS])
+    mockApi(healthyApi)
+    render(<App />)
+    await userEvent.click(await screen.findByRole('tab', { name: 'Plan' }))
 
     expect(normalize((await screen.findByText(/Going to 2 stores/)).textContent)).toBe(
       'Going to 2 stores saves € 2,40 for 9 min more travel than 1 store. At €10/h that is worth it.',
@@ -112,14 +149,28 @@ describe('App shopping plans', () => {
     expect(plans[0]).toHaveAttribute('aria-checked', 'true')
 
     const atBudgetbaas = screen.getByRole('list', { name: 'Buy at Budgetbaas Moerwijk' })
-    expect(normalize(atBudgetbaas.textContent)).toBe('Halfvolle melk1 × 1,5 L (500 ml more than needed)€ 1,29')
+    expect(normalize(atBudgetbaas.textContent)).toBe('Halfvolle melk · 1 × 1,5 L (+500 ml)€ 1,29')
     expect(screen.getByTestId('map')).toHaveTextContent('2 routes, active 0')
+  })
+
+  it('ticks items off while shopping', async () => {
+    storeList([MILK, EGGS])
+    mockApi(healthyApi)
+    render(<App />)
+    await userEvent.click(await screen.findByRole('tab', { name: 'Plan' }))
+
+    const milk = await screen.findByRole('checkbox', { name: /Halfvolle melk/ })
+    await userEvent.click(milk)
+
+    expect(milk).toBeChecked()
+    expect(milk.closest('li')).toHaveClass('is-done')
   })
 
   it('shows another plan in detail when it is selected', async () => {
     storeList([MILK, EGGS])
     mockApi(healthyApi)
     render(<App />)
+    await userEvent.click(await screen.findByRole('tab', { name: 'Plan' }))
 
     await userEvent.click(await screen.findByRole('radio', { name: /1 store:/ }))
 
@@ -132,16 +183,18 @@ describe('App shopping plans', () => {
     storeList([MILK])
     const fetchMock = mockApi(healthyApi)
     render(<App />)
-    await screen.findByText(/Going to 2 stores/)
+    await screen.findByRole('table', { name: 'Prices per chain' })
 
-    await userEvent.click(screen.getByRole('radio', { name: 'Lowest price' }))
-    await waitFor(() => expect(optimizeBodies(fetchMock).at(-1)?.valueOfTimeEurPerHour).toBe(3))
-    expect(normalize(screen.getByText(/Your time counts as/).textContent)).toBe(
+    await userEvent.click(screen.getByRole('button', { name: /Priority: Balanced/ }))
+    const dialog = screen.getByRole('dialog', { name: 'What matters more?' })
+    expect(normalize(within(dialog).getByText(/€3\/h/).textContent)).toBe(
       'Your time counts as €3/h: 10 extra minutes must save at least € 0,50.',
     )
+    await userEvent.click(within(dialog).getByRole('radio', { name: /Lowest price/ }))
 
-    await userEvent.click(screen.getByRole('radio', { name: 'Least time' }))
-    await waitFor(() => expect(optimizeBodies(fetchMock).at(-1)?.valueOfTimeEurPerHour).toBe(25))
+    await waitFor(() => expect(optimizeBodies(fetchMock).at(-1)?.valueOfTimeEurPerHour).toBe(3))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Priority: Lowest price/ })).toHaveTextContent('Lowest price · €3/h')
   })
 
   it('keeps the list after a reload', async () => {
@@ -156,16 +209,16 @@ describe('App shopping plans', () => {
     expect(screen.getByLabelText('Halfvolle melk quantity')).toHaveTextContent('1 L')
   })
 
-  it('removes items and hides the plan when the list is empty', async () => {
+  it('goes back to the empty state when the last item is removed', async () => {
     storeList([MILK])
     mockApi(healthyApi)
     render(<App />)
-    await screen.findByText(/Going to 2 stores/)
+    await screen.findByRole('table', { name: 'Prices per chain' })
 
     await userEvent.click(screen.getByRole('button', { name: 'Remove Halfvolle melk' }))
 
-    expect(screen.queryByRole('radiogroup', { name: 'Shopping plans' })).not.toBeInTheDocument()
-    expect(screen.getByTestId('map')).toHaveTextContent('no route')
+    expect(screen.queryByRole('table')).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Where should you shop?' })).toBeInTheDocument()
   })
 
   it('names items that no store sells', async () => {
@@ -197,6 +250,6 @@ describe('App shopping plans', () => {
     mockApi(healthyApi)
     render(<App />)
 
-    expect(await screen.findByText(/Search for products and add them/)).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Where should you shop?' })).toBeInTheDocument()
   })
 })
