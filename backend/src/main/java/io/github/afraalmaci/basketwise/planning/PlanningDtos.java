@@ -61,10 +61,11 @@ public final class PlanningDtos {
      * @param stops         stores in visiting order with what to buy at each
      * @param legs          origin → first stop, ..., last stop → origin
      * @param geometry      the route line as [latitude, longitude] pairs
+     * @param roles         why the plan is shown: "best", "cheapest", "fastest" (one or more)
      */
     public record PlanDto(int storeCount, long basketCents, long travelSeconds, long travelDistanceMeters,
                           long timeCostCents, long scoreCents, List<StopDto> stops, List<LegDto> legs,
-                          boolean estimated, List<List<Double>> geometry) {
+                          boolean estimated, List<List<Double>> geometry, List<String> roles) {
     }
 
     public record UnavailableDto(long productId, String name) {
@@ -98,8 +99,8 @@ public final class PlanningDtos {
     }
 
     /**
-     * @param plans               the best plan for each number of stores, best first, without
-     *                            plans another one beats on both price and time
+     * @param plans               the best plan first, then the cheapest and the fastest when
+     *                            they are other plans
      * @param unavailable         items on the list that no chain sells; left out of the plans
      * @param combinationsChecked chain combinations the optimizer compared
      * @param comparison          the list priced at every chain

@@ -59,6 +59,15 @@ class OptimizeResponseMapperTest {
     }
 
     @Test
+    void plansCarryTheirRolesInLowerCase() {
+        OptimizeResponse response = map(List.of(new ListItem(10, 1000), new ListItem(11, 20)));
+
+        assertThat(response.plans().get(0).roles()).contains("best");
+        assertThat(response.plans().stream().flatMap(plan -> plan.roles().stream()).toList())
+                .containsExactlyInAnyOrder("best", "cheapest", "fastest");
+    }
+
+    @Test
     void chainColumnsSumWhatEachChainSells() {
         OptimizeResponse response = map(List.of(new ListItem(10, 1000), new ListItem(11, 20)));
 

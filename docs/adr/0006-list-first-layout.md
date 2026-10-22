@@ -26,7 +26,8 @@ every item at every chain, was not visible at all.
     stop (with checkboxes for use in the store) next to the map.
 - `POST /api/optimize` returns the comparison with the plans: the optimizer already prices
   every item at every chain, so this is one response, not a second endpoint.
-- Plans that another plan beats on both price and time are no longer returned.
+- Plans that another plan beats on both price and time are no longer returned. (Superseded
+  by ADR 0007: plans are now chosen by role.)
 - The "nearest store per chain" list is gone; the comparison's column headers carry that
   information.
 - The look from the UI refresh carries over unchanged: Delft-blue ink on paper, the route

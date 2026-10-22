@@ -41,7 +41,7 @@ class PlanningApiIntegrationTest {
         assertThat(response.body()).contains(
                 "\"mode\":\"bike\"", "\"valueOfTimeEurPerHour\":10.0", "\"estimated\":true",
                 "\"combinationsChecked\":14", "\"unavailable\":[]",
-                "\"plans\":[{\"storeCount\":", "\"basketCents\":", "\"scoreCents\":",
+                "\"plans\":[{\"storeCount\":", "\"roles\":[\"best\"", "\"basketCents\":", "\"scoreCents\":",
                 "\"name\":\"Halfvolle melk\"", "\"neededAmount\":2000", "\"quantityText\":",
                 "\"geometry\":[[52.0809,4.3245]",
                 "\"comparison\":{\"chains\":[{\"chainCode\":\"BUDGETBAAS\"", "\"nearestSeconds\":",

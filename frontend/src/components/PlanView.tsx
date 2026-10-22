@@ -4,7 +4,7 @@ import type { OptimizeResponse, Plan, Purchase } from '../api/planning'
 import type { LatLng, ServiceArea, TravelMode } from '../api/routing'
 import { formatDistance, formatDuration, formatPrice } from '../format'
 import type { Origin } from '../location'
-import { difference, extraText, packsText, verdict } from '../planText'
+import { difference, extraText, packsText, roleLabel, verdict } from '../planText'
 import { MapView } from './MapView'
 import { Price } from './Price'
 
@@ -45,7 +45,7 @@ export function PlanView({ data, chains, stores, provider, origin, onOriginChang
       <div className="plan-cards" role="radiogroup" aria-label="Shopping plans">
         {data.plans.map((plan, i) => (
           <button
-            key={plan.storeCount}
+            key={planKey(plan)}
             type="button"
             role="radio"
             aria-checked={i === index}
@@ -57,11 +57,12 @@ export function PlanView({ data, chains, stores, provider, origin, onOriginChang
               <span className="plan-card__time"> · {formatDuration(plan.travelSeconds)}</span>
             </span>
             <span className={i === 0 ? 'plan-card__tag plan-card__tag--best' : 'plan-card__tag'}>
-              {i === 0 ? 'Best' : difference(plan, best)}
+              {roleLabel(plan.roles)}
             </span>
             <span className="plan-card__stores">
               {plan.storeCount} {plan.storeCount === 1 ? 'store' : 'stores'}: {plan.stops.map((stop) => stop.storeName).join(', ')}
             </span>
+            {i > 0 && <span className="plan-card__delta">{difference(plan, best)} vs. best</span>}
           </button>
         ))}
       </div>

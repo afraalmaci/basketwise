@@ -95,7 +95,7 @@ cd frontend && npm test
 | `GET /api/products/search?q=melk` | Fuzzy product search; every hit includes each chain's offers with normalized unit prices |
 | `GET /api/routing/config` | Demo service area, default location, travel modes, max stops |
 | `GET /api/routing/nearest?lat=52.08&lon=4.32&mode=bike` | Nearest store of each chain by travel time |
-| `POST /api/optimize` | Where to buy a shopping list: `{"origin": {"latitude": 52.08, "longitude": 4.32}, "mode": "bike", "valueOfTimeEurPerHour": 10, "items": [{"productId": 1, "quantity": 2000}]}`. Quantities are in ml, g or pieces. Returns the list priced at every chain (`comparison`) and the best plan for each number of stores, best first, with packs per store and the route. |
+| `POST /api/optimize` | Where to buy a shopping list: `{"origin": {"latitude": 52.08, "longitude": 4.32}, "mode": "bike", "valueOfTimeEurPerHour": 10, "items": [{"productId": 1, "quantity": 2000}]}`. Quantities are in ml, g or pieces. Returns the list priced at every chain (`comparison`) and up to three plans (the best, the cheapest and the fastest, each with its `roles`), with packs per store and the route. |
 | `POST /api/routing/trip` | Round trips through 1 to 3 stores, fastest first plus up to two alternatives (other visiting orders or nearby branches of the same chains): `{"origin": {"latitude": 52.08, "longitude": 4.32}, "storeIds": [3, 12], "mode": "walk"}` |
 | `GET /api/system/info` | Data mode and database status |
 

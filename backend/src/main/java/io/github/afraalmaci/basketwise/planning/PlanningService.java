@@ -112,7 +112,7 @@ public class PlanningService {
     }
 
     /**
-     * @param plans        best plan per number of stores, best first
+     * @param plans        the best plan first, then the cheapest and the fastest
      * @param products     every product on the list, by id, with its offers
      * @param unavailable  products on the list that no chain sells
      */

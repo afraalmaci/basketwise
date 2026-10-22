@@ -45,6 +45,9 @@ export type PlanStop = {
   items: Purchase[]
 }
 
+/** Why a plan is shown: the recommendation, or the extreme on price or on time. */
+export type PlanRole = 'best' | 'cheapest' | 'fastest'
+
 /** One way to do the shopping: where to go, in which order, and what to buy at each stop. */
 export type Plan = {
   storeCount: number
@@ -63,6 +66,8 @@ export type Plan = {
   estimated: boolean
   /** [latitude, longitude] pairs. */
   geometry: [number, number][]
+  /** One or more; the first plan always has 'best'. */
+  roles: PlanRole[]
 }
 
 /** One chain's column in the comparison. */
@@ -109,7 +114,7 @@ export type OptimizeResponse = {
   combinationsChecked: number
   /** Items no chain sells; the plans leave them out. */
   unavailable: { productId: number; name: string }[]
-  /** The best plan for each number of stores, best first, without plans beaten on both price and time. */
+  /** The best plan first, then the cheapest and the fastest when they are other plans. */
   plans: Plan[]
   comparison: Comparison
 }

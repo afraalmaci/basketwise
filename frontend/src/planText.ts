@@ -1,5 +1,5 @@
 import type { Unit } from './api/catalog'
-import type { BoughtPack, Plan } from './api/planning'
+import type { BoughtPack, Plan, PlanRole } from './api/planning'
 import { formatDuration, formatPrice, formatQuantity } from './format'
 
 // The sentences that explain a plan. Kept apart from the components so they can be tested
@@ -14,32 +14,35 @@ export function difference(plan: Plan, best: Plan): string {
   return `${priceText} · ${timeText}`
 }
 
+const ROLE_LABELS: Record<PlanRole, string> = { best: 'Best for you', cheapest: 'Cheapest', fastest: 'Fastest' }
+
+/** "Best for you · Cheapest" */
+export function roleLabel(roles: PlanRole[]): string {
+  return roles.map((role) => ROLE_LABELS[role]).join(' · ')
+}
+
 /**
- * One sentence on the trade-off, comparing the best plan with the closest alternative:
- * fewer stores if the best plan has several, more stores otherwise.
+ * One sentence on the trade-off: what the cheapest and the fastest plan would change
+ * compared with the recommendation, and why the recommendation wins at this value of time.
  */
 export function verdict(plans: Plan[], eurosPerHour: number): string {
   const best = plans[0]
-  const stores = (count: number) => `${count} ${count === 1 ? 'store' : 'stores'}`
-  const fewer = plans.find((plan) => plan.storeCount < best.storeCount)
-  if (fewer) {
-    const saving = fewer.basketCents - best.basketCents
-    const extra = best.travelSeconds - fewer.travelSeconds
-    if (saving > 0 && extra > 0) {
-      return `Going to ${stores(best.storeCount)} saves ${formatPrice(saving)} for ${formatDuration(extra)} more travel than ${stores(fewer.storeCount)}. At €${eurosPerHour}/h that is worth it.`
-    }
-    return `${stores(best.storeCount)} beat ${stores(fewer.storeCount)} on both price and time.`
+  const cheapest = plans.find((plan) => plan.roles.includes('cheapest')) ?? best
+  const fastest = plans.find((plan) => plan.roles.includes('fastest')) ?? best
+  const rate = `At €${eurosPerHour}/h`
+  const money = (cents: number) => formatPrice(Math.abs(cents))
+  const time = (seconds: number) => formatDuration(Math.abs(seconds))
+
+  if (cheapest === best && fastest === best) {
+    return 'This plan is both the cheapest and the fastest way to buy your list.'
   }
-  const more = plans.find((plan) => plan.storeCount > best.storeCount)
-  if (more) {
-    const saving = best.basketCents - more.basketCents
-    const extra = more.travelSeconds - best.travelSeconds
-    if (saving > 0) {
-      return `${stores(more.storeCount)} would save ${formatPrice(saving)} but add ${formatDuration(Math.max(extra, 0))} of travel. At €${eurosPerHour}/h that is not worth it.`
-    }
-    return `Going to more stores would not save anything.`
+  if (cheapest === best) {
+    return `The fastest plan saves ${time(best.travelSeconds - fastest.travelSeconds)} but costs ${money(fastest.basketCents - best.basketCents)} more. ${rate} that is not worth it.`
   }
-  return best.storeCount === 1 ? 'One store has everything at the best price.' : `${stores(best.storeCount)} is the only option.`
+  if (fastest === best) {
+    return `The cheapest plan saves ${money(best.basketCents - cheapest.basketCents)} but takes ${time(cheapest.travelSeconds - best.travelSeconds)} longer. ${rate} that is not worth it.`
+  }
+  return `The cheapest plan would save ${money(best.basketCents - cheapest.basketCents)} for ${time(cheapest.travelSeconds - best.travelSeconds)} more travel; the fastest would save ${time(best.travelSeconds - fastest.travelSeconds)} for ${money(fastest.basketCents - best.basketCents)} more. ${rate} this plan is the balance.`
 }
 
 /** "2 × 1 L" or "1 × 1,5 L + 1 × 1 L", with the chain's own pack labels. */

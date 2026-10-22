@@ -3,7 +3,9 @@ package io.github.afraalmaci.basketwise.optimization;
 import io.github.afraalmaci.basketwise.optimization.PackSelector.Selection;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -28,10 +30,15 @@ import java.util.TreeSet;
  *       routing APIs; it only asks "how long does a trip through these chains take?".</li>
  * </ol>
  *
- * <p>Each plan is scored with a {@link ScoringPolicy} (price + time × value of time). The
- * result holds the best plan for every number of stores, best overall first, so the UI can
- * show "1 store: €42,00 · 10 min" next to "2 stores: €39,60 · 19 min". Alternatives that
- * another plan beats on both price and time are left out.
+ * <p>Each plan is scored with a {@link ScoringPolicy} (price + time × value of time). Out of
+ * all plans the result keeps at most three, each for a reason ({@link PlanRole}): the best
+ * (lowest score), the cheapest basket and the fastest trip. One plan can have several roles;
+ * then it is listed once. Showing the two extremes next to the recommendation answers "what
+ * would the cheapest way cost me in time?" and "what does the quickest way cost?", whatever
+ * the number of stores.
+ *
+ * <p>The cheapest and the fastest plan are never beaten on both price and time (ties are
+ * broken by the other measure), so no plan that nobody would pick is ever shown.
  *
  * <p>A subset where some chain would sell nothing is skipped: visiting a store to buy
  * nothing is never useful, and the smaller subset without that chain is evaluated anyway.
@@ -79,23 +86,35 @@ public final class BasketOptimizer {
      * @param purchases     one per available item, in the order of the shopping list
      * @param timeCostCents travel time expressed in money
      * @param scoreCents    basket + time cost; lower is better
+     * @param roles         why the plan is in the result; empty while it is only a candidate
      */
     public record Plan(List<String> chainCodes, List<Purchase> purchases, long basketCents, Trip trip,
-                       long timeCostCents, long scoreCents) {
+                       long timeCostCents, long scoreCents, Set<PlanRole> roles) {
 
         public Plan {
             chainCodes = List.copyOf(chainCodes);
             purchases = List.copyOf(purchases);
+            roles = roles.isEmpty() ? Set.of() : java.util.Collections.unmodifiableSet(EnumSet.copyOf(roles));
+        }
+
+        /** A candidate, before it has a role. */
+        public Plan(List<String> chainCodes, List<Purchase> purchases, long basketCents, Trip trip,
+                    long timeCostCents, long scoreCents) {
+            this(chainCodes, purchases, basketCents, trip, timeCostCents, scoreCents, Set.of());
         }
 
         public int storeCount() {
             return chainCodes.size();
         }
+
+        Plan withRoles(Set<PlanRole> newRoles) {
+            return new Plan(chainCodes, purchases, basketCents, trip, timeCostCents, scoreCents, newRoles);
+        }
     }
 
     /**
-     * @param plans                 best plan per number of stores, best overall first, without
-     *                              plans that another plan beats on both price and time
+     * @param plans                 the best plan first, then the cheapest and the fastest when
+     *                              they are other plans; each carries its roles
      * @param unavailableProductIds items no chain sells; the plans leave them out
      * @param combinationsChecked   chain subsets considered
      * @param cheapestPerChain      layer 1 on its own: per chain, per product it sells, the
@@ -159,9 +178,8 @@ public final class BasketOptimizer {
             throw new IllegalArgumentException("Too many chains: " + chains.size());
         }
 
-        // Layers 2 and 3: every subset of chains, best plan per subset size.
-        Comparator<Plan> bestFirst = comparator(scoring);
-        Map<Integer, Plan> bestPerSize = new TreeMap<>();
+        // Layers 2 and 3: every subset of chains.
+        List<Plan> candidates = new ArrayList<>();
         int checked = 0;
         for (int mask = 1; mask < (1 << chains.size()); mask++) {
             if (Integer.bitCount(mask) > maxStores) {
@@ -174,46 +192,43 @@ public final class BasketOptimizer {
                     subset.add(chains.get(i));
                 }
             }
-            plan(subset, available, cheapest, scoring, trips).ifPresent(plan ->
-                    bestPerSize.merge(plan.storeCount(), plan,
-                            (current, candidate) -> bestFirst.compare(candidate, current) < 0 ? candidate : current));
+            plan(subset, available, cheapest, scoring, trips).ifPresent(candidates::add);
         }
-
-        List<Plan> plans = new ArrayList<>(bestPerSize.values());
-        plans.sort(bestFirst);
-        plans = withoutDominated(plans);
-        return new Result(plans, unavailable, checked, cheapest);
+        return new Result(pick(candidates, scoring), unavailable, checked, cheapest);
     }
+
+    /** Cheapest basket; ties go to the shorter trip, then fewer stores. */
+    static final Comparator<Plan> CHEAPEST_FIRST = Comparator
+            .comparingLong(Plan::basketCents)
+            .thenComparingLong(plan -> plan.trip().durationSeconds())
+            .thenComparingInt(Plan::storeCount)
+            .thenComparing(plan -> String.join(",", plan.chainCodes()));
+
+    /** Shortest trip; ties go to the cheaper basket, then fewer stores. */
+    static final Comparator<Plan> FASTEST_FIRST = Comparator
+            .comparingLong((Plan plan) -> plan.trip().durationSeconds())
+            .thenComparingLong(Plan::basketCents)
+            .thenComparingInt(Plan::storeCount)
+            .thenComparing(plan -> String.join(",", plan.chainCodes()));
 
     /**
-     * Drops alternatives that another plan beats on both price and time (and is at least as
-     * good on the other): nobody would pick them. The best plan always stays, whatever the
-     * value of time. Example: a 3-store plan that costs more and takes longer than the
-     * 2-store plan is the best 3-store plan, but not worth showing.
+     * The plans worth showing: best first, then the cheapest, then the fastest. A plan that
+     * wins more than one role is listed once with all of them.
      */
-    static List<Plan> withoutDominated(List<Plan> sorted) {
-        List<Plan> kept = new ArrayList<>();
-        for (int i = 0; i < sorted.size(); i++) {
-            Plan candidate = sorted.get(i);
-            boolean dominated = false;
-            for (Plan other : sorted) {
-                if (i > 0 && other != candidate && dominates(other, candidate)) {
-                    dominated = true;
-                    break;
-                }
-            }
-            if (!dominated) {
-                kept.add(candidate);
-            }
+    static List<Plan> pick(List<Plan> candidates, ScoringPolicy scoring) {
+        if (candidates.isEmpty()) {
+            return List.of();
         }
-        return kept;
-    }
-
-    private static boolean dominates(Plan a, Plan b) {
-        long aSeconds = a.trip().durationSeconds();
-        long bSeconds = b.trip().durationSeconds();
-        return a.basketCents() <= b.basketCents() && aSeconds <= bSeconds
-                && (a.basketCents() < b.basketCents() || aSeconds < bSeconds);
+        Map<Plan, Set<PlanRole>> roles = new LinkedHashMap<>();
+        roles.computeIfAbsent(candidates.stream().min(comparator(scoring)).orElseThrow(), plan -> EnumSet.noneOf(PlanRole.class))
+                .add(PlanRole.BEST);
+        roles.computeIfAbsent(candidates.stream().min(CHEAPEST_FIRST).orElseThrow(), plan -> EnumSet.noneOf(PlanRole.class))
+                .add(PlanRole.CHEAPEST);
+        roles.computeIfAbsent(candidates.stream().min(FASTEST_FIRST).orElseThrow(), plan -> EnumSet.noneOf(PlanRole.class))
+                .add(PlanRole.FASTEST);
+        List<Plan> picked = new ArrayList<>();
+        roles.forEach((plan, planRoles) -> picked.add(plan.withRoles(planRoles)));
+        return List.copyOf(picked);
     }
 
     /** Best plan using exactly these chains, or empty if they cannot cover the list or be reached. */

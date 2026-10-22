@@ -40,8 +40,8 @@ export const routingConfig: RoutingConfig = {
 }
 
 /**
- * The optimizer's answer for milk + eggs: two stores is best (cheaper, 9 minutes more),
- * one store is the alternative.
+ * The optimizer's answer for milk + eggs: two stores is best and cheapest (9 minutes more),
+ * one store is the fastest.
  */
 export const optimizeResponse: OptimizeResponse = {
   mode: 'bike',
@@ -52,6 +52,7 @@ export const optimizeResponse: OptimizeResponse = {
   plans: [
     {
       storeCount: 2,
+      roles: ['best', 'cheapest'],
       basketCents: 498,
       travelSeconds: 1500,
       travelDistanceMeters: 6250,
@@ -112,6 +113,7 @@ export const optimizeResponse: OptimizeResponse = {
     },
     {
       storeCount: 1,
+      roles: ['fastest'],
       basketCents: 738,
       travelSeconds: 960,
       travelDistanceMeters: 2480,
