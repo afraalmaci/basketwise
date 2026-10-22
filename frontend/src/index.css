@@ -928,9 +928,17 @@ input {
   font-size: 0.82rem;
   color: var(--muted);
 }
+.plan-card__delta {
+  grid-column: 1 / -1;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
 .plan-card.is-active .plan-card__time,
 .plan-card.is-active .plan-card__tag,
-.plan-card.is-active .plan-card__stores {
+.plan-card.is-active .plan-card__stores,
+.plan-card.is-active .plan-card__delta {
   color: color-mix(in srgb, var(--paper) 72%, transparent);
 }
 .plan-card.is-active .plan-card__tag--best {

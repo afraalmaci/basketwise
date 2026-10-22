@@ -63,6 +63,11 @@ class BasketOptimizerTest {
         assertThat(best.scoreCents()).isEqualTo(495);
         assertThat(chainOf(best, MILK)).isEqualTo("CHEAP");
         assertThat(chainOf(best, COLA)).isEqualTo("NEAR");
+        // The best plan is also the cheapest; NEAR alone is the fastest.
+        assertThat(best.roles()).containsExactly(PlanRole.BEST, PlanRole.CHEAPEST);
+        assertThat(result.plans()).hasSize(2);
+        assertThat(result.plans().get(1).chainCodes()).containsExactly("NEAR");
+        assertThat(result.plans().get(1).roles()).containsExactly(PlanRole.FASTEST);
     }
 
     @Test
@@ -71,13 +76,15 @@ class BasketOptimizerTest {
 
         assertThat(result.plans()).hasSize(2);
         Plan best = result.plans().get(0);
-        Plan alternative = result.plans().get(1);
+        Plan cheapest = result.plans().get(1);
         assertThat(best.chainCodes()).containsExactly("NEAR");
         assertThat(best.basketCents()).isEqualTo(500);
         assertThat(best.scoreCents()).isEqualTo(667); // 5.00 + 10 min at 10 EUR/h
-        // The two-store plan is still returned, so the UI can say what it would have saved.
-        assertThat(alternative.storeCount()).isEqualTo(2);
-        assertThat(alternative.scoreCents()).isEqualTo(717);
+        assertThat(best.roles()).containsExactly(PlanRole.BEST, PlanRole.FASTEST);
+        // The cheapest plan is still returned, so the UI can say what it would have saved.
+        assertThat(cheapest.roles()).containsExactly(PlanRole.CHEAPEST);
+        assertThat(cheapest.storeCount()).isEqualTo(2);
+        assertThat(cheapest.scoreCents()).isEqualTo(717);
     }
 
     @Test
@@ -86,9 +93,9 @@ class BasketOptimizerTest {
         Result result = BasketOptimizer.optimize(
                 List.of(new Item(MILK, 1000)), OFFERS, 3, ScoringPolicy.eurosPerHour(0), TRIPS);
 
-        assertThat(result.plans()).hasSize(1);
-        assertThat(result.best().orElseThrow().chainCodes()).containsExactly("CHEAP");
         assertThat(result.combinationsChecked()).isEqualTo(3);
+        assertThat(result.plans()).extracting(Plan::storeCount).containsExactly(1, 1);
+        assertThat(result.best().orElseThrow().chainCodes()).containsExactly("CHEAP");
     }
 
     @Test
@@ -156,27 +163,36 @@ class BasketOptimizerTest {
     }
 
     @Test
-    void dropsAlternativesBeatenOnBothPriceAndTime() {
-        // The 2-store plan costs more and takes longer than the 1-store plan: nobody picks it.
-        // The 3-store plan is slower but cheaper, so it is a real trade-off and stays.
-        Trip quick = new Trip(List.of(1L), 600, 0);
-        Trip slow = new Trip(List.of(2L, 3L), 1_200, 0);
-        Plan best = new Plan(List.of("A"), List.of(), 500, quick, 0, 500);
-        Plan pricierAndSlower = new Plan(List.of("A", "B"), List.of(), 520, slow, 0, 520);
-        Plan cheaperButSlower = new Plan(List.of("A", "B", "C"), List.of(), 450, slow, 0, 450);
+    void cheapestAndFastestCanBeOnePlanWithBothRoles() {
+        // A single chain that is both the cheapest and the closest: one plan, three roles.
+        List<Offer> offers = List.of(new Offer("ONLY", MILK, new Pack(1000, 100)));
+        TripEstimator trips = chains -> Optional.of(new Trip(List.of(1L), 300, 0));
 
-        assertThat(BasketOptimizer.withoutDominated(List.of(best, pricierAndSlower, cheaperButSlower)))
-                .containsExactly(best, cheaperButSlower);
+        Result result = BasketOptimizer.optimize(List.of(new Item(MILK, 1000)), offers, 3, ScoringPolicy.eurosPerHour(10), trips);
+
+        assertThat(result.plans()).hasSize(1);
+        assertThat(result.best().orElseThrow().roles())
+                .containsExactly(PlanRole.BEST, PlanRole.CHEAPEST, PlanRole.FASTEST);
     }
 
     @Test
-    void theBestPlanIsNeverDropped() {
-        // At 0 EUR/h equal prices tie, and the tie goes to fewer stores, even though the
-        // 2-store plan is quicker. The best plan stays; the quicker one stays too.
-        Plan oneStore = new Plan(List.of("A"), List.of(), 500, new Trip(List.of(1L), 900, 0), 0, 500);
-        Plan twoStores = new Plan(List.of("A", "B"), List.of(), 500, new Trip(List.of(1L, 2L), 600, 0), 0, 500);
+    void showsTheCheapestWayEvenWhenItIsNotTheBest() {
+        // Three single-store options at 10 EUR/h: FAR is cheapest (1.00 + 40 min = score 7.67),
+        // CLOSE is fastest (2.60 + 5 min = 3.43), MID is the balance (1.30 + 10 min = 2.97).
+        // Before roles, only the best one-store plan was shown, so FAR and CLOSE were hidden.
+        List<Offer> offers = List.of(
+                new Offer("FAR", MILK, new Pack(1000, 100)),
+                new Offer("MID", MILK, new Pack(1000, 130)),
+                new Offer("CLOSE", MILK, new Pack(1000, 260)));
+        Map<String, Long> seconds = Map.of("FAR", 2_400L, "MID", 600L, "CLOSE", 300L);
+        TripEstimator trips = chains -> Optional.of(new Trip(List.of(),
+                chains.stream().mapToLong(seconds::get).sum(), 0));
 
-        assertThat(BasketOptimizer.withoutDominated(List.of(oneStore, twoStores))).containsExactly(oneStore, twoStores);
+        Result result = BasketOptimizer.optimize(List.of(new Item(MILK, 1000)), offers, 1, ScoringPolicy.eurosPerHour(10), trips);
+
+        assertThat(result.plans().stream().map(plan -> plan.chainCodes().get(0)).toList()).containsExactly("MID", "FAR", "CLOSE");
+        assertThat(result.plans()).extracting(Plan::roles).containsExactly(
+                Set.of(PlanRole.BEST), Set.of(PlanRole.CHEAPEST), Set.of(PlanRole.FASTEST));
     }
 
     @Test
@@ -205,28 +221,29 @@ class BasketOptimizerTest {
             int maxStores = 1 + random.nextInt(3);
 
             Result result = BasketOptimizer.optimize(instance.items, instance.offers, maxStores, policy, instance.trips());
-            Map<Integer, Long> bruteForce = instance.bestExactScorePerStoreCount(maxStores, policy);
+            BruteForce bruteForce = instance.bruteForce(maxStores, policy);
 
-            if (bruteForce.isEmpty()) {
+            if (bruteForce.bestScorePerStoreCount.isEmpty()) {
                 assertThat(result.plans()).isEmpty();
                 continue;
             }
-            // The overall best is found exactly.
-            long bestBruteForce = bruteForce.values().stream().mapToLong(Long::longValue).min().orElseThrow();
+            // Each role is found exactly: best score, cheapest basket, shortest trip.
+            long bestBruteForce = bruteForce.bestScorePerStoreCount.values().stream()
+                    .mapToLong(Long::longValue).min().orElseThrow();
             Plan best = result.best().orElseThrow();
+            assertThat(best.roles().contains(PlanRole.BEST)).isTrue();
             assertThat(policy.exactScore(best.basketCents(), best.trip().durationSeconds())).isEqualTo(bestBruteForce);
+            assertThat(withRole(result, PlanRole.CHEAPEST).basketCents()).isEqualTo(bruteForce.lowestBasket);
+            assertThat(withRole(result, PlanRole.FASTEST).trip().durationSeconds()).isEqualTo(bruteForce.shortestTrip);
+            // Every role exactly once, and no plan without a role.
+            assertThat(result.plans().stream().mapToInt(plan -> plan.roles().size()).sum()).isEqualTo(3);
             // No plan claims a score the naive search cannot reach with that many stores. (The
             // naive search may know more multi-store plans: ones that send an item to a pricier
             // chain just to visit it, which the optimizer rightly ignores.)
             for (Plan plan : result.plans()) {
+                assertThat(plan.roles()).isNotEmpty();
                 long score = policy.exactScore(plan.basketCents(), plan.trip().durationSeconds());
-                assertThat(score).isGreaterThanOrEqualTo(bruteForce.get(plan.storeCount()));
-            }
-            for (int i = 1; i < result.plans().size(); i++) {
-                Plan previous = result.plans().get(i - 1);
-                Plan next = result.plans().get(i);
-                assertThat(policy.exactScore(previous.basketCents(), previous.trip().durationSeconds()))
-                        .isLessThanOrEqualTo(policy.exactScore(next.basketCents(), next.trip().durationSeconds()));
+                assertThat(score).isGreaterThanOrEqualTo(bruteForce.bestScorePerStoreCount.get(plan.storeCount()));
             }
         }
     }
@@ -254,6 +271,17 @@ class BasketOptimizerTest {
                 previousBasket = best.get().basketCents();
             }
         }
+    }
+
+    /** What the naive search over every assignment found. */
+    private static final class BruteForce {
+        final Map<Integer, Long> bestScorePerStoreCount = new HashMap<>();
+        long lowestBasket = Long.MAX_VALUE;
+        long shortestTrip = Long.MAX_VALUE;
+    }
+
+    private static Plan withRole(Result result, PlanRole role) {
+        return result.plans().stream().filter(plan -> plan.roles().contains(role)).findFirst().orElseThrow();
     }
 
     private static String chainOf(Plan plan, long productId) {
@@ -295,14 +323,14 @@ class BasketOptimizerTest {
             return subset -> Optional.of(new Trip(List.of(), 120 + subset.stream().mapToLong(detour::get).sum(), 0));
         }
 
-        /** Every assignment of items to chains that sell them; best exact score per number of stores used. */
-        Map<Integer, Long> bestExactScorePerStoreCount(int maxStores, ScoringPolicy policy) {
-            Map<Integer, Long> best = new HashMap<>();
+        /** Every assignment of items to chains that sell them. */
+        BruteForce bruteForce(int maxStores, ScoringPolicy policy) {
+            BruteForce best = new BruteForce();
             assign(0, new ArrayList<>(), maxStores, policy, best);
             return best;
         }
 
-        private void assign(int index, List<String> chosen, int maxStores, ScoringPolicy policy, Map<Integer, Long> best) {
+        private void assign(int index, List<String> chosen, int maxStores, ScoringPolicy policy, BruteForce best) {
             List<Item> sold = items.stream().filter(item -> anyChainSells(item.productId())).toList();
             if (index == sold.size()) {
                 if (sold.isEmpty()) {
@@ -317,7 +345,9 @@ class BasketOptimizerTest {
                     basket += cost(chosen.get(i), sold.get(i));
                 }
                 long seconds = trips().fastestTrip(used).orElseThrow().durationSeconds();
-                best.merge(used.size(), policy.exactScore(basket, seconds), Math::min);
+                best.bestScorePerStoreCount.merge(used.size(), policy.exactScore(basket, seconds), Math::min);
+                best.lowestBasket = Math.min(best.lowestBasket, basket);
+                best.shortestTrip = Math.min(best.shortestTrip, seconds);
                 return;
             }
             for (String chain : chains) {

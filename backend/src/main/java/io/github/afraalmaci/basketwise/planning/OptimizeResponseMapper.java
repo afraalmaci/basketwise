@@ -24,6 +24,7 @@ import io.github.afraalmaci.basketwise.routing.RoutingDtos.LegDto;
 import io.github.afraalmaci.basketwise.routing.TravelMode;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -101,7 +102,8 @@ final class OptimizeResponseMapper {
                 routed.stops().stream().map(stop -> stop(stop, products)).toList(),
                 routed.route().legs().stream().map(leg -> new LegDto(leg.durationSeconds(), leg.distanceMeters())).toList(),
                 routed.estimated(),
-                routed.route().geometry().stream().map(point -> List.of(point.latitude(), point.longitude())).toList());
+                routed.route().geometry().stream().map(point -> List.of(point.latitude(), point.longitude())).toList(),
+                routed.plan().roles().stream().map(role -> role.name().toLowerCase(Locale.ROOT)).toList());
     }
 
     private static StopDto stop(Stop stop, Map<Long, ProductDto> products) {

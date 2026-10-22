@@ -138,13 +138,13 @@ describe('App shopping list and results', () => {
     render(<App />)
     await userEvent.click(await screen.findByRole('tab', { name: 'Plan' }))
 
-    expect(normalize((await screen.findByText(/Going to 2 stores/)).textContent)).toBe(
-      'Going to 2 stores saves € 2,40 for 9 min more travel than 1 store. At €10/h that is worth it.',
+    expect(normalize((await screen.findByText(/The fastest plan/)).textContent)).toBe(
+      'The fastest plan saves 9 min but costs € 2,40 more. At €10/h that is not worth it.',
     )
     const plans = within(screen.getByRole('radiogroup', { name: 'Shopping plans' })).getAllByRole('radio')
     expect(plans.map((plan) => normalize(plan.textContent))).toEqual([
-      '€ 4,98 · 25 minBest2 stores: Hoekwinkel Centrum, Budgetbaas Moerwijk',
-      '€ 7,38 · 16 min+€ 2,40 · −9 min1 store: Hoekwinkel Centrum',
+      '€ 4,98 · 25 minBest for you · Cheapest2 stores: Hoekwinkel Centrum, Budgetbaas Moerwijk',
+      '€ 7,38 · 16 minFastest1 store: Hoekwinkel Centrum+€ 2,40 · −9 min vs. best',
     ])
     expect(plans[0]).toHaveAttribute('aria-checked', 'true')
 

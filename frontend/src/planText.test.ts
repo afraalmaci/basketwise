@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import type { Plan } from './api/planning'
-import { difference, verdict } from './planText'
+import type { Plan, PlanRole } from './api/planning'
+import { difference, roleLabel, verdict } from './planText'
 
 const normalize = (text: string) => text.replace(/ /g, ' ')
 
-const plan = (storeCount: number, basketCents: number, travelSeconds: number): Plan => ({
+const plan = (storeCount: number, basketCents: number, travelSeconds: number, roles: PlanRole[] = []): Plan => ({
   storeCount,
   basketCents,
   travelSeconds,
@@ -15,31 +15,40 @@ const plan = (storeCount: number, basketCents: number, travelSeconds: number): P
   legs: [],
   estimated: true,
   geometry: [],
+  roles,
 })
 
 describe('verdict', () => {
-  it('explains why more stores won', () => {
-    expect(normalize(verdict([plan(2, 400, 1140), plan(1, 500, 600)], 3))).toBe(
-      'Going to 2 stores saves € 1,00 for 9 min more travel than 1 store. At €3/h that is worth it.',
+  it('says when the best plan wins on price and time', () => {
+    expect(verdict([plan(1, 400, 600, ['best', 'cheapest', 'fastest'])], 10)).toBe(
+      'This plan is both the cheapest and the fastest way to buy your list.',
     )
   })
 
-  it('explains why more stores lost', () => {
-    expect(normalize(verdict([plan(1, 500, 600), plan(2, 400, 1140)], 10))).toBe(
-      '2 stores would save € 1,00 but add 9 min of travel. At €10/h that is not worth it.',
+  it('explains what the faster plan would cost', () => {
+    expect(normalize(verdict([plan(2, 400, 1140, ['best', 'cheapest']), plan(1, 500, 600, ['fastest'])], 3))).toBe(
+      'The fastest plan saves 9 min but costs € 1,00 more. At €3/h that is not worth it.',
     )
   })
 
-  it('says when more stores win on both price and time', () => {
-    expect(verdict([plan(2, 400, 500), plan(1, 500, 600)], 10)).toBe('2 stores beat 1 store on both price and time.')
+  it('explains what the cheaper plan would cost in time', () => {
+    expect(normalize(verdict([plan(1, 500, 600, ['best', 'fastest']), plan(2, 400, 1140, ['cheapest'])], 10))).toBe(
+      'The cheapest plan saves € 1,00 but takes 9 min longer. At €10/h that is not worth it.',
+    )
   })
 
-  it('says when more stores would not save anything', () => {
-    expect(verdict([plan(1, 400, 600), plan(2, 400, 900)], 10)).toBe('Going to more stores would not save anything.')
+  it('explains a plan between the two extremes', () => {
+    const plans = [plan(1, 130, 600, ['best']), plan(1, 100, 2400, ['cheapest']), plan(1, 260, 300, ['fastest'])]
+    expect(normalize(verdict(plans, 10))).toBe(
+      'The cheapest plan would save € 0,30 for 30 min more travel; the fastest would save 5 min for € 1,30 more. At €10/h this plan is the balance.',
+    )
   })
+})
 
-  it('handles a single plan', () => {
-    expect(verdict([plan(1, 400, 600)], 10)).toBe('One store has everything at the best price.')
+describe('roleLabel', () => {
+  it('joins the roles a plan has', () => {
+    expect(roleLabel(['best', 'cheapest'])).toBe('Best for you · Cheapest')
+    expect(roleLabel(['fastest'])).toBe('Fastest')
   })
 })
 

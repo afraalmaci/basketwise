@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.afraalmaci.basketwise.catalog.CatalogDtos.OfferDto;
 import io.github.afraalmaci.basketwise.catalog.CatalogDtos.ProductDto;
+import io.github.afraalmaci.basketwise.optimization.PlanRole;
 import io.github.afraalmaci.basketwise.optimization.ScoringPolicy;
 import io.github.afraalmaci.basketwise.planning.PlanningService.ListItem;
 import io.github.afraalmaci.basketwise.planning.PlanningService.Outcome;
@@ -49,7 +50,7 @@ class PlanningServiceTest {
             routing, AREA, () -> List.of(NEAR_STORE, CHEAP_STORE, CHEAP_FARTHER), PlanningServiceTest::products);
 
     @Test
-    void returnsTheBestPlanPerStoreCountWithStopsInVisitingOrder() {
+    void returnsTheBestPlanAndTheExtremesWithStopsInVisitingOrder() {
         Outcome outcome = service.plan(request(0, new ListItem(10, 2000), new ListItem(11, 1500)));
 
         // At 0 EUR/h only price counts: milk at CHEAP, cola at NEAR.
@@ -67,10 +68,11 @@ class PlanningServiceTest {
         assertThat(best.route().geometry().get(1)).isEqualTo(best.stops().get(0).store().location());
         assertThat(outcome.estimated()).isTrue();
 
-        // The one-store alternative is NEAR alone.
-        RoutedPlan oneStore = outcome.plans().get(1);
-        assertThat(oneStore.plan().storeCount()).isEqualTo(1);
-        assertThat(oneStore.plan().basketCents()).isEqualTo(300 + 200);
+        // The fastest alternative is NEAR alone.
+        RoutedPlan fastest = outcome.plans().get(1);
+        assertThat(fastest.plan().roles()).containsExactly(PlanRole.FASTEST);
+        assertThat(fastest.plan().storeCount()).isEqualTo(1);
+        assertThat(fastest.plan().basketCents()).isEqualTo(300 + 200);
     }
 
     @Test
