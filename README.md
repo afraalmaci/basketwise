@@ -26,7 +26,7 @@ plan for one, two or three stores and the route, with what to buy at each stop.
 
 - **Backend:** Java 21, Spring Boot 4, PostgreSQL, Flyway
 - **Frontend:** React 19, TypeScript, Vite, Leaflet, OpenStreetMap or CARTO basemaps
-- **Infra:** Docker Compose, GitHub Actions
+- **Infra:** Docker Compose, Caddy, GitHub Actions, Hetzner Cloud
 
 ## Running locally
 
@@ -115,6 +115,12 @@ before it is stored.
 | Hoekwinkel | most expensive | everything | 8, everywhere |
 | Versplein | average, cheap produce | ~85% | 5 |
 | Marktwijs | slightly below average, cheap drinks | ~90% | 4 |
+
+## Deployment
+
+The live demo runs on a single small VM: `docker-compose.prod.yml` adds Caddy for automatic
+HTTPS and keeps Postgres and the backend off the public internet. Step-by-step guide:
+[`docs/deploy.md`](docs/deploy.md).
 
 ## Project structure
 
