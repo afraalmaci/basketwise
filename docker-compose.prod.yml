@@ -1,0 +1,73 @@
+# Production stack for a single server (see docs/deploy.md).
+#
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Differences from docker-compose.yml (local development):
+# - Only Caddy publishes ports (80 and 443). The database, backend and frontend are reachable
+#   only inside the Docker network, so Postgres is never exposed to the internet.
+# - Caddy terminates HTTPS with an automatic Let's Encrypt certificate for SITE_ADDRESS.
+# - Every service restarts automatically after a crash or a server reboot.
+# - No default database password: DB_PASSWORD must be set in .env.
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: basketwise
+      POSTGRES_USER: ${DB_USER:-basketwise}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-basketwise} -d basketwise"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/basketwise
+      DB_USER: ${DB_USER:-basketwise}
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      DATA_MODE: demo
+      ORS_API_KEY: ${ORS_API_KEY:-}
+      # Keep the JVM heap well inside the server's memory next to Postgres.
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=50
+    mem_limit: 1g
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_CARTO_API_KEY: ${VITE_CARTO_API_KEY:-}
+    restart: unless-stopped
+    depends_on:
+      - backend
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:?Set SITE_ADDRESS in .env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - frontend
+
+volumes:
+  db-data:
+  # Holds the TLS certificates; keeping it avoids hitting Let's Encrypt rate limits on redeploys.
+  caddy-data:
+  caddy-config:
