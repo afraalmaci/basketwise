@@ -55,14 +55,23 @@ services:
     restart: unless-stopped
     environment:
       SITE_ADDRESS: ${SITE_ADDRESS:?Set SITE_ADDRESS in .env}
+      # Address of the ATS/OPT site in ./sites (optional).
+      ATS_SITE_ADDRESS: ${ATS_SITE_ADDRESS:-}
     ports:
       - "80:80"
       - "443:443"
       - "443:443/udp"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Site files for other apps on this server (gitignored, see the Caddyfile).
+      - ./sites:/etc/caddy/sites:ro
       - caddy-data:/data
       - caddy-config:/config
+    networks:
+      - default
+      # Shared only with the ATS/OPT containers; created once with
+      # "docker network create ats_proxy" and owned by neither stack.
+      - ats_proxy
     depends_on:
       - frontend
 
@@ -71,3 +80,7 @@ volumes:
   # Holds the TLS certificates; keeping it avoids hitting Let's Encrypt rate limits on redeploys.
   caddy-data:
   caddy-config:
+
+networks:
+  ats_proxy:
+    external: true

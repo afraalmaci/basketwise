@@ -16,3 +16,7 @@
 
 	reverse_proxy frontend:80
 }
+
+# Other sites on this server (e.g. ATS/OPT), one file each in ./sites, which is
+# mounted read-only. Empty is fine: then this line does nothing.
+import sites/*.caddy

@@ -1,6 +1,9 @@
 # Environment
 .env
 
+# Caddy site files for other apps on the server (see Caddyfile)
+/sites/
+
 # Java / Maven
 backend/target/
 *.class
